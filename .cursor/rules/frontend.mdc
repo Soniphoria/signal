@@ -1,0 +1,14 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: “Frontend: React +  项目规则”
+globs:
+  - "frontend/**/*.tsx"
+alwaysApply: false
+---
+
+- 使用 React 函数组件，避免 class 组件。
+<!-- - 所有 CSS 类必须用 Tailwind utility。 -->
