@@ -6,9 +6,17 @@ const ReactRefreshWebpackPlugin = require("@pmmmwh/react-refresh-webpack-plugin"
 module.exports = merge(common, {
   mode: "development",
   devtool: "inline-source-map",
+  output: {
+    publicPath: "http://localhost:3000/",
+  },
   devServer: {
     port: 3000,
     hot: "only",
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+      "Access-Control-Allow-Headers": "X-Requested-With, content-type, Authorization"
+    },
     static: {
       directory: path.resolve(__dirname, "public"),
       watch: true,
@@ -21,6 +29,7 @@ module.exports = merge(common, {
     },
     historyApiFallback: {
       rewrites: [
+        { from: /^\/projects\/.*\/midi_tracks/, to: "/edit.html" },
         { from: /^\/edit$/, to: "/edit.html" },
         { from: /^\/auth$/, to: "/auth.html" },
         { from: /^\/home$/, to: "/community.html" },

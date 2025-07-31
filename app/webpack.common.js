@@ -3,6 +3,7 @@ const HtmlWebpackPlugin = require("html-webpack-plugin")
 const ForkTsCheckerWebpackPlugin = require("fork-ts-checker-webpack-plugin")
 const webpack = require("webpack")
 const Dotenv = require("dotenv-webpack")
+const CopyPlugin = require("copy-webpack-plugin")
 
 module.exports = {
   context: __dirname,
@@ -14,6 +15,7 @@ module.exports = {
   output: {
     filename: "[name]-[chunkhash].js",
     clean: true,
+    publicPath: "/",
   },
   module: {
     rules: [
@@ -51,6 +53,17 @@ module.exports = {
     }),
     new ForkTsCheckerWebpackPlugin({
       formatter: { type: "codeframe", pathType: "absolute" },
+    }),
+    new CopyPlugin({
+      patterns: [
+        {
+          from: "public",
+          to: ".",
+          globOptions: {
+            ignore: ["**/*.html"],
+          },
+        },
+      ],
     }),
   ],
 }
