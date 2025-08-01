@@ -33,6 +33,7 @@
   "homepage": "https://github.com/ryohey/signal/",
   "private": true,
   "devDependencies": {
+    "copy-webpack-plugin": "^13.0.0",
     "cpx": "^1.5.0",
     "prettier": "^3.5.3",
     "rimraf": "^6.0.1",

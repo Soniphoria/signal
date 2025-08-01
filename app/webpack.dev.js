@@ -2,6 +2,7 @@ const { merge } = require("webpack-merge")
 const common = require("./webpack.common.js")
 const path = require("path")
 const ReactRefreshWebpackPlugin = require("@pmmmwh/react-refresh-webpack-plugin")
+const CopyPlugin = require("copy-webpack-plugin")
 
 module.exports = merge(common, {
   mode: "development",
@@ -63,6 +64,14 @@ module.exports = merge(common, {
   plugins: [
     new ReactRefreshWebpackPlugin({
       exclude: [/node_modules/],
+    }),
+    new CopyPlugin({
+      patterns: [
+        {
+          from: path.resolve(__dirname, "../node_modules/@ryohey/wavelet/dist"),
+          to: path.resolve(__dirname, "dist/@ryohey/wavelet/dist"),
+        },
+      ],
     }),
   ],
   resolve: {
