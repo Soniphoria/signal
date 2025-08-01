@@ -30,6 +30,34 @@ export const OnInit: FC = () => {
     }
   }
 
+  const loadMidiFromLocalStorageIfNeeded = async (): Promise<boolean> => {
+    const data = localStorage.getItem("midi_project_data")
+    if (!data) {
+      return false
+    }
+
+    const closeProgress = showProgress(localized["loading-external-midi"])
+    try {
+      const { midi_tracks } = JSON.parse(data)
+      if (midi_tracks && midi_tracks.length > 0) {
+        const url = midi_tracks[0].file_path
+        const proxyUrl = "/azure-proxy" + new URL(url).pathname
+        const response = await fetch(proxyUrl)
+        const arrayBuffer = await response.arrayBuffer()
+        const song = songFromArrayBuffer(arrayBuffer, "downloaded.mid")
+        setSong(song)
+        localStorage.removeItem("midi_project_data")
+        return true // Song loaded successfully
+      }
+    } catch (e) {
+      setIsErrorDialogOpen(true)
+      setErrorMessage((e as Error).message)
+    } finally {
+      closeProgress()
+    }
+    return false // Failed to load song
+  }
+
   const loadExternalMidiIfNeeded = async () => {
     const params = new URLSearchParams(window.location.search)
     const openParam = params.get("open")
@@ -70,7 +98,14 @@ export const OnInit: FC = () => {
 
   useEffect(() => {
     ;(async () => {
-      await init()
+      // Try to load from localStorage first
+      const loadedFromStorage = await loadMidiFromLocalStorageIfNeeded()
+
+      // If no song was loaded from storage, proceed with the default initialization
+      if (!loadedFromStorage) {
+        await init()
+      }
+
       await loadExternalMidiIfNeeded()
       await loadArgumentFileIfNeeded()
     })()

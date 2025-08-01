@@ -7,7 +7,7 @@ module.exports = merge(common, {
   mode: "development",
   devtool: "inline-source-map",
   output: {
-    publicPath: "http://localhost:3000/",
+    publicPath: "/",
   },
   devServer: {
     port: 3000,
