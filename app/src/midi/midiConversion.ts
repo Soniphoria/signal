@@ -19,6 +19,9 @@ import {
 import Song from "../song"
 import Track, { AnyEventFeature } from "../track"
 
+const DEFAULT_IMPORT_BPM = 90
+const DEFAULT_IMPORT_USEC_PER_BEAT = Math.round(60000000 / DEFAULT_IMPORT_BPM)
+
 const trackFromMidiEvents = (events: AnyEvent[]): Track => {
   const track = new Track()
 
@@ -43,6 +46,22 @@ const tracksFromFormat0Events = (events: AnyEvent[]): Track[] => {
   for (const channel of Object.keys(eventsPerChannel)) {
     const events = eventsPerChannel[channel]
     const ch = parseInt(channel)
+
+    // Ensure default tempo exists on conductor track (channel index 0)
+    if (
+      ch === 0 &&
+      !events.some(
+        (e: any) => "subtype" in e && (e as any).subtype === "setTempo",
+      )
+    ) {
+      events.push({
+        type: "meta",
+        subtype: "setTempo",
+        microsecondsPerBeat: DEFAULT_IMPORT_USEC_PER_BEAT,
+        tick: 0,
+      } as any)
+    }
+
     while (tracks.length <= ch) {
       const track = new Track()
       track.channel = ch > 0 ? ch - 1 : undefined
@@ -98,6 +117,20 @@ export const createConductorTrackIfNeeded = (
       })
       .filter(isNotNull),
   )
+
+  // Ensure default tempo exists on conductor track
+  if (
+    !conductorTrack.some(
+      (e: any) => "subtype" in e && (e as any).subtype === "setTempo",
+    )
+  ) {
+    conductorTrack.push({
+      type: "meta",
+      subtype: "setTempo",
+      microsecondsPerBeat: DEFAULT_IMPORT_USEC_PER_BEAT,
+      tick: 0,
+    } as any)
+  }
 
   return [conductorTrack, ...newTracks].map(addDeltaTime)
 }
