@@ -38,10 +38,13 @@ const Column = styled.div`
 
 const Routes: FC = () => {
   const { path } = useRouter()
+  const isProjectMidiTracksPath = /^\/projects\/[^/]+\/midi_tracks/.test(path)
+  
   return (
     <>
       {path === "/edit" && <PianoRollEditor />}
       {path === "/track" && <PianoRollEditor />}
+      {isProjectMidiTracksPath && <PianoRollEditor />}
       {path === "/tempo" && <TempoEditor />}
       {path === "/arrange" && <ArrangeEditor />}
     </>

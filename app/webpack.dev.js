@@ -13,10 +13,14 @@ module.exports = merge(common, {
   devServer: {
     port: 3000,
     hot: "only",
+    allowedHosts: 'all',
+    webSocketServer: 'ws',
     headers: {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
-      "Access-Control-Allow-Headers": "X-Requested-With, content-type, Authorization"
+      "Access-Control-Allow-Headers": "X-Requested-With, content-type, Authorization",
+      // Add CSP headers to allow necessary resources
+      "Content-Security-Policy": "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; img-src 'self' data: https:; font-src 'self' https: data:; connect-src 'self' https: wss: ws: blob:;"
     },
     static: {
       directory: path.resolve(__dirname, "public"),
@@ -27,11 +31,18 @@ module.exports = merge(common, {
         warnings: false,
         errors: true,
       },
+      webSocketURL: {
+        hostname: 'localhost',
+        pathname: '/ws',
+        port: 3000,
+        protocol: 'ws'
+      }
     },
     historyApiFallback: {
       rewrites: [
         { from: /^\/projects\/.*\/midi_tracks/, to: "/edit.html" },
         { from: /^\/edit$/, to: "/edit.html" },
+        { from: /^\/track$/, to: "/edit.html" },
         { from: /^\/auth$/, to: "/auth.html" },
         { from: /^\/home$/, to: "/community.html" },
         { from: /^\/profile$/, to: "/community.html" },
