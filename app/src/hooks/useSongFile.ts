@@ -3,6 +3,7 @@ import { ChangeEvent } from "react"
 import { useCreateSong, useOpenSong, useSaveSong } from "../actions"
 import { saveFile, saveFileAs, useOpenFile } from "../actions/file"
 import { useLocalization } from "../localize/useLocalization"
+import { downloadSongAsSeparateMidis } from "../midi/midiConversion"
 import { useSong } from "./useSong"
 
 export const useSongFile = () => {
@@ -45,7 +46,7 @@ export const useSongFile = () => {
       await saveFileAs(getSong())
     },
     async downloadSong() {
-      saveSong()
+      downloadSongAsSeparateMidis(getSong())
     },
   }
 }

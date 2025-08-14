@@ -200,3 +200,52 @@ export function downloadSongAsMidi(song: Song) {
   const blob = new Blob([bytes], { type: "application/octet-stream" })
   downloadBlob(blob, song.filepath.length > 0 ? song.filepath : "no name.mid")
 }
+
+// Download each non-conductor track as an individual MIDI file.
+// Each file will include the conductor track (tempo/time-signature) plus the track itself.
+export function downloadSongAsSeparateMidis(song: Song) {
+  const conductor = song.conductorTrack
+  const endOfTrack: EndOfTrackEvent = {
+    deltaTime: 0,
+    type: "meta",
+    subtype: "endOfTrack",
+  }
+
+  // Build raw conductor track
+  const conductorRaw: AnyEvent[] = conductor
+    ? [...toRawEvents(conductor.events), endOfTrack]
+    : [
+        {
+          type: "meta",
+          subtype: "setTempo",
+          microsecondsPerBeat: DEFAULT_IMPORT_USEC_PER_BEAT,
+          deltaTime: 0,
+        } as any,
+        endOfTrack,
+      ]
+
+  const baseName = (
+    song.filepath && song.filepath.length > 0
+      ? song.filepath
+      : song.name && song.name.length > 0
+        ? song.name
+        : "no name"
+  ).replace(/\.mid$/i, "")
+
+  song.tracks.forEach((t, index) => {
+    if (t.isConductorTrack) {
+      return
+    }
+
+    const rawEvents = [...toRawEvents(t.events), endOfTrack]
+    const trackRaw =
+      t.channel !== undefined ? rawEvents.map(setChannel(t.channel)) : rawEvents
+
+    const bytes = writeMidiFile([conductorRaw, trackRaw], song.timebase)
+    const blob = new Blob([bytes], { type: "application/octet-stream" })
+
+    const trackLabel = t.name && t.name.length > 0 ? t.name : `track-${index}`
+    const fileName = `${baseName} - ${trackLabel}.mid`
+    downloadBlob(blob, fileName)
+  })
+}
