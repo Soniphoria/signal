@@ -1,4 +1,5 @@
 import styled from "@emotion/styled"
+import DownloadIcon from "mdi-react/DownloadIcon"
 import Forum from "mdi-react/ForumIcon"
 import Help from "mdi-react/HelpCircleIcon"
 import Settings from "mdi-react/SettingsIcon"
@@ -6,6 +7,7 @@ import { CSSProperties, FC, useCallback } from "react"
 import { getPlatform, isRunningInElectron } from "../../helpers/platform"
 import { useRootView } from "../../hooks/useRootView"
 import { useRouter } from "../../hooks/useRouter"
+import { useSongFile } from "../../hooks/useSongFile"
 import ArrangeIcon from "../../images/icons/arrange.svg"
 import PianoIcon from "../../images/icons/piano.svg"
 import TempoIcon from "../../images/icons/tempo.svg"
@@ -85,6 +87,7 @@ export const IconStyle: CSSProperties = {
 export const Navigation: FC = () => {
   const { setOpenSettingDialog, setOpenHelpDialog } = useRootView()
   const { path, setPath } = useRouter()
+  const { saveSong } = useSongFile()
 
   const onClickPianoRollTab = useCallback(() => {
     setPath("/track")
@@ -105,6 +108,10 @@ export const Navigation: FC = () => {
   const onClickHelp = useCallback(() => {
     setOpenHelpDialog(true)
   }, [setOpenHelpDialog])
+
+  const onClickSave = useCallback(() => {
+    saveSong()
+  }, [saveSong])
 
   return (
     <Container>
@@ -167,6 +174,17 @@ export const Navigation: FC = () => {
           </TabTitle>
         </Tab>
       </Tooltip>
+
+      <Tab
+        onMouseDown={onClickSave}
+        style={{
+          backgroundColor: "rgb(157 255 32 / 0.8)",
+          color: "black",
+        }}
+      >
+        <DownloadIcon style={IconStyle} />
+        <TabTitle>Save & Download</TabTitle>
+      </Tab>
 
       <FlexibleSpacer />
 
