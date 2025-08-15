@@ -1,7 +1,7 @@
 :root {
   --backgroundColor: #1f1f23;
   --secondaryBackgroundColor: hsl(245deg 5% 16%);
-  --themeColor: hsl(230, 70%, 55%);
+  --themeColor: rgb(157 255 32 / 0.8);
   --textColor: white;
   --secondaryTextColor: rgba(255, 255, 255, 0.5);
 }

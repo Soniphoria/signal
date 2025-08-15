@@ -19,7 +19,7 @@ export interface Theme {
 export const defaultTheme: Theme = {
   font: "Inter, -apple-system, BlinkMacSystemFont, Avenir, Lato",
   canvasFont: "Arial",
-  themeColor: "hsl(230, 70%, 55%)",
+  themeColor: "rgb(157 255 32 / 0.8)",
   textColor: "#ffffff",
   secondaryTextColor: "hsl(223, 12%, 60%)",
   tertiaryTextColor: "#5a6173",
