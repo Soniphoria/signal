@@ -4,6 +4,7 @@ import Forum from "mdi-react/ForumIcon"
 import Help from "mdi-react/HelpCircleIcon"
 import Settings from "mdi-react/SettingsIcon"
 import { CSSProperties, FC, useCallback } from "react"
+import { hasFSAccess } from "../../actions/file"
 import { getPlatform, isRunningInElectron } from "../../helpers/platform"
 import { useRootView } from "../../hooks/useRootView"
 import { useRouter } from "../../hooks/useRouter"
@@ -87,7 +88,7 @@ export const IconStyle: CSSProperties = {
 export const Navigation: FC = () => {
   const { setOpenSettingDialog, setOpenHelpDialog } = useRootView()
   const { path, setPath } = useRouter()
-  const { saveSong } = useSongFile()
+  const { saveSong, downloadSong } = useSongFile()
 
   const onClickPianoRollTab = useCallback(() => {
     setPath("/track")
@@ -109,9 +110,13 @@ export const Navigation: FC = () => {
     setOpenHelpDialog(true)
   }, [setOpenHelpDialog])
 
-  const onClickSave = useCallback(() => {
-    saveSong()
-  }, [saveSong])
+  const onClickSaveOrDownload = useCallback(() => {
+    if (hasFSAccess) {
+      saveSong()
+    } else {
+      downloadSong()
+    }
+  }, [saveSong, downloadSong])
 
   return (
     <Container>
@@ -176,7 +181,7 @@ export const Navigation: FC = () => {
       </Tooltip>
 
       <Tab
-        onMouseDown={onClickSave}
+        onMouseDown={onClickSaveOrDownload}
         style={{
           backgroundColor: "rgb(157 255 32 / 0.8)",
           color: "black",
