@@ -4,7 +4,8 @@ import { basename } from "../helpers/path"
 import { songFromMidi, songToMidi } from "../midi/midiConversion"
 import { writeFile } from "../services/fs-helper"
 import Song from "../song"
-import Track from "../track"
+import { isSetTempoEvent } from "../track"
+import { conductorTrack } from "../track/TrackFactory"
 import { useSetSong } from "./song"
 
 // URL parameter for automation purposes used in scripts/perf/index.js
@@ -91,10 +92,21 @@ export const songsFromFiles = async (files: File[]): Promise<Song> => {
   // 创建一个新的 Song 实例，不使用 emptySong
   const song = new Song()
 
-  // 添加一个 conductor track（这是必需的）
-  const conductorTrack = new Track()
-  // conductor track 的 channel 保持 undefined
-  song.addTrack(conductorTrack)
+  // 查找第一个包含 tempo 信息的 conductor track
+  const firstTempoTrack = songs
+    .flatMap((s) => s.tracks)
+    .find(
+      (track) => track.isConductorTrack && track.events.some(isSetTempoEvent),
+    )
+
+  // 如果找到了包含 tempo 的 conductor track，使用它的克隆
+  // 否则使用默认的 conductor track
+  const mainConductorTrack = firstTempoTrack
+    ? firstTempoTrack.clone()
+    : conductorTrack()
+
+  // 添加 conductor track
+  song.addTrack(mainConductorTrack)
 
   // 添加所有导入的音轨
   newTracks.forEach((track) => song.addTrack(track))
