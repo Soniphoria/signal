@@ -6,14 +6,19 @@ import { songFromArrayBuffer } from "../../actions/file"
 import { isRunningInElectron } from "../../helpers/platform"
 import { useStores } from "../../hooks/useStores"
 import { useLocalization } from "../../localize/useLocalization"
-import { useRouter } from "../../hooks/useRouter"
+
 import { InitializeErrorDialog } from "./InitializeErrorDialog"
+
+import { flatMap } from "lodash"
+import { isNotUndefined } from "../../helpers/array"
+import Song from "../../song"
+import { isSetTempoEvent } from "../../track"
+import { conductorTrack } from "../../track/TrackFactory"
 
 export const OnInit: FC = () => {
   const rootStore = useStores()
   const setSong = useSetSong()
   const loadSongFromExternalMidiFile = useLoadSongFromExternalMidiFile()
-  const { setPath } = useRouter()
 
   const [isErrorDialogOpen, setIsErrorDialogOpen] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
@@ -23,7 +28,10 @@ export const OnInit: FC = () => {
   const init = async () => {
     const closeProgress = showProgress(localized["initializing"])
     try {
-      await rootStore.init()
+      const loaded = await loadMidiFromLocalStorageIfNeeded()
+      if (!loaded) {
+        await rootStore.init()
+      }
     } catch (e) {
       setIsErrorDialogOpen(true)
       setErrorMessage((e as Error).message)
@@ -44,31 +52,115 @@ export const OnInit: FC = () => {
     try {
       const { midi_tracks } = JSON.parse(data)
       console.log("[OnInit] Parsed midi_tracks:", midi_tracks)
-      
+
       if (midi_tracks && midi_tracks.length > 0) {
-        const url = midi_tracks[0].file_path
-        const proxyUrl = "/azure-proxy" + new URL(url).pathname
-        console.log("[OnInit] Fetching MIDI from:", proxyUrl)
-        
-        const response = await fetch(proxyUrl)
-        if (!response.ok) {
-          throw new Error(`Failed to fetch MIDI file: ${response.status} ${response.statusText}`)
+        console.log(`[OnInit] Loading ${midi_tracks.length} MIDI files...`)
+
+        // Fetch all MIDI files
+        const fetchPromises = midi_tracks.map(async (track: any) => {
+          const url = track.file_path
+          const proxyUrl = "/azure-proxy" + new URL(url).pathname
+          console.log("[OnInit] Fetching MIDI from:", proxyUrl)
+
+          const response = await fetch(proxyUrl)
+          if (!response.ok) {
+            throw new Error(
+              `Failed to fetch MIDI file: ${response.status} ${response.statusText}`,
+            )
+          }
+
+          const arrayBuffer = await response.arrayBuffer()
+          return {
+            arrayBuffer,
+            name: track.name || `Track ${track.id}` || "downloaded.mid",
+          }
+        })
+
+        // Wait for all files to be fetched
+        const midiFiles = await Promise.all(fetchPromises)
+        console.log("[OnInit] All MIDI files fetched successfully")
+
+        if (midiFiles.length === 1) {
+          // Single file - use existing logic
+          const song = songFromArrayBuffer(
+            midiFiles[0].arrayBuffer,
+            midiFiles[0].name,
+          )
+          setSong(song)
+        } else {
+          // Multiple files - combine them like songsFromFiles
+          const songs = midiFiles.map((file) =>
+            songFromArrayBuffer(file.arrayBuffer, file.name),
+          )
+
+          // Collect all non-conductor tracks
+          const allTracks = flatMap(songs, (s) => s.tracks)
+            .filter(isNotUndefined)
+            .filter((track) => !track.isConductorTrack)
+
+          // Track used channels to avoid conflicts
+          const usedChannels = new Set<number>()
+
+          const newTracks = allTracks.map((originalTrack) => {
+            const track = originalTrack.clone()
+
+            // Handle channel conflicts
+            if (
+              track.channel !== undefined &&
+              usedChannels.has(track.channel)
+            ) {
+              let nextChannel = 0
+              while (usedChannels.has(nextChannel) && nextChannel < 16) {
+                nextChannel++
+              }
+              track.channel = nextChannel
+            }
+
+            if (track.channel !== undefined) {
+              usedChannels.add(track.channel)
+            }
+
+            return track
+          })
+
+          // Create new Song instance
+          const song = new Song()
+
+          // Find first conductor track with tempo info
+          const firstTempoTrack = songs
+            .flatMap((s) => s.tracks)
+            .find(
+              (track) =>
+                track.isConductorTrack && track.events.some(isSetTempoEvent),
+            )
+
+          const mainConductorTrack = firstTempoTrack
+            ? firstTempoTrack.clone()
+            : conductorTrack()
+
+          // Add conductor track
+          song.addTrack(mainConductorTrack)
+
+          // Add all imported tracks
+          newTracks.forEach((track) => song.addTrack(track))
+
+          song.name = "imported midi files"
+          song.isSaved = false
+          setSong(song)
         }
-        
-        console.log("[OnInit] MIDI fetch successful, parsing...")
-        const arrayBuffer = await response.arrayBuffer()
-        const song = songFromArrayBuffer(arrayBuffer, "downloaded.mid")
-        setSong(song)
+
         localStorage.removeItem("midi_project_data")
-        console.log("[OnInit] MIDI song loaded successfully")
+        console.log("[OnInit] MIDI song(s) loaded successfully")
 
         // Check if we're on the /projects/{project_id}/midi_tracks route or /track route
-        const pathMatch = window.location.pathname.match(/^\/projects\/[^/]+\/midi_tracks/) || window.location.pathname === '/track'
+        const pathMatch =
+          window.location.pathname.match(/^\/projects\/[^/]+\/midi_tracks/) ||
+          window.location.pathname === "/track"
         if (pathMatch) {
           console.log("[OnInit] On piano roll route, triggering re-render")
           // Force a re-render of the piano roll editor without changing the URL
           setTimeout(() => {
-            window.dispatchEvent(new Event('resize'))
+            window.dispatchEvent(new Event("resize"))
           }, 100)
         }
 
@@ -84,7 +176,8 @@ export const OnInit: FC = () => {
       console.log("[OnInit] Closing progress dialog")
       closeProgress()
     }
-    return false // Failed to load song
+
+    return false
   }
 
   const loadExternalMidiIfNeeded = async () => {
@@ -129,7 +222,7 @@ export const OnInit: FC = () => {
     ;(async () => {
       // Always initialize the core first
       await init()
-      
+
       // Try to load from localStorage first
       const loadedFromStorage = await loadMidiFromLocalStorageIfNeeded()
 
