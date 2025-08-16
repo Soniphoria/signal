@@ -45,7 +45,7 @@ export const FileMenu: FC<{ close: () => void }> = ({ close }) => {
       <MenuDivider />
 
       <MenuItem onClick={onClickOpen}>
-        <Localized name="open-song" />
+        <Localized name="import-midi" />
         <HotKey>{envString.cmdOrCtrl}+O</HotKey>
       </MenuItem>
 

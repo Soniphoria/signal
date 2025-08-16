@@ -7,15 +7,19 @@ import { useTrackMute } from "../hooks/useTrackMute"
 import { downloadSongAsMidi } from "../midi/midiConversion"
 import Song, { emptySong } from "../song"
 import { emptyTrack, TrackId, UNASSIGNED_TRACK_ID } from "../track"
-import { songFromFile } from "./file"
+import { songFromFile, songsFromFiles } from "./file"
 
 const openSongFile = async (input: HTMLInputElement): Promise<Song | null> => {
-  if (input.files === null || input.files.length === 0) {
+  const files = input.files
+  if (files === null || files.length === 0) {
     return Promise.resolve(null)
   }
 
-  const file = input.files[0]
-  return await songFromFile(file)
+  if (files.length === 1) {
+    return await songFromFile(files[0])
+  }
+
+  return await songsFromFiles(Array.from(files))
 }
 
 export const useSetSong = () => {

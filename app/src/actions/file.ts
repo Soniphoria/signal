@@ -1,7 +1,10 @@
+import { flatMap } from "lodash"
+import { isNotUndefined } from "../helpers/array"
 import { basename } from "../helpers/path"
 import { songFromMidi, songToMidi } from "../midi/midiConversion"
 import { writeFile } from "../services/fs-helper"
-import Song from "../song"
+import Song, { emptySong } from "../song"
+import Track from "../track"
 import { useSetSong } from "./song"
 
 // URL parameter for automation purposes used in scripts/perf/index.js
@@ -17,18 +20,17 @@ export const useOpenFile = () => {
   const setSong = useSetSong()
 
   return async () => {
-    let fileHandle: FileSystemFileHandle
+    let fileHandles: FileSystemFileHandle[]
     try {
-      fileHandle = (
-        await window.showOpenFilePicker({
-          types: [
-            {
-              description: "MIDI file",
-              accept: { "audio/midi": [".mid"] },
-            },
-          ],
-        })
-      )[0]
+      fileHandles = await window.showOpenFilePicker({
+        types: [
+          {
+            description: "MIDI file",
+            accept: { "audio/midi": [".mid"] },
+          },
+        ],
+        multiple: true,
+      })
     } catch (ex) {
       if ((ex as Error).name === "AbortError") {
         return
@@ -38,11 +40,34 @@ export const useOpenFile = () => {
       alert(msg)
       return
     }
-    const file = await fileHandle.getFile()
-    const song = await songFromFile(file)
-    song.fileHandle = fileHandle
-    setSong(song)
+
+    if (fileHandles.length === 1) {
+      const file = await fileHandles[0].getFile()
+      const song = await songFromFile(file)
+      song.fileHandle = fileHandles[0]
+      setSong(song)
+    } else {
+      const files = await Promise.all(fileHandles.map((h) => h.getFile()))
+      const song = await songsFromFiles(files)
+      song.fileHandle = null // File handle is not available for multiple files
+      setSong(song)
+    }
   }
+}
+
+export const songsFromFiles = async (files: File[]): Promise<Song> => {
+  const songs = await Promise.all(files.map(songFromFile))
+  const tracks = flatMap(songs, (s) => s.tracks).filter(isNotUndefined)
+  const newTracks = tracks.map((t, i) => {
+    const track = new Track()
+    track.addEvents([...t.events])
+    track.channel = i
+    return track
+  })
+  const song = emptySong()
+  newTracks.forEach((t) => song.addTrack(t))
+  song.name = "imported midi files"
+  return song
 }
 
 export const songFromFile = async (file: File) =>
