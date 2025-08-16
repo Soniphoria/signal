@@ -3,7 +3,7 @@ import { isNotUndefined } from "../helpers/array"
 import { basename } from "../helpers/path"
 import { songFromMidi, songToMidi } from "../midi/midiConversion"
 import { writeFile } from "../services/fs-helper"
-import Song, { emptySong } from "../song"
+import Song from "../song"
 import Track from "../track"
 import { useSetSong } from "./song"
 
@@ -57,16 +57,50 @@ export const useOpenFile = () => {
 
 export const songsFromFiles = async (files: File[]): Promise<Song> => {
   const songs = await Promise.all(files.map(songFromFile))
-  const tracks = flatMap(songs, (s) => s.tracks).filter(isNotUndefined)
-  const newTracks = tracks.map((t, i) => {
-    const track = new Track()
-    track.addEvents([...t.events])
-    track.channel = i
+
+  // 收集所有非 conductor 的音轨，不过滤音符事件（让用户决定什么是有用的）
+  const allTracks = flatMap(songs, (s) => s.tracks)
+    .filter(isNotUndefined)
+    .filter((track) => !track.isConductorTrack) // 只过滤掉 conductor tracks
+
+  // 跟踪已使用的通道号，避免通道冲突
+  const usedChannels = new Set<number>()
+
+  const newTracks = allTracks.map((originalTrack) => {
+    // 使用 clone() 方法来正确复制轨道
+    const track = originalTrack.clone()
+
+    // 处理通道冲突：如果原始通道已被使用，分配新通道
+    if (track.channel !== undefined && usedChannels.has(track.channel)) {
+      // 寻找下一个可用通道
+      let nextChannel = 0
+      while (usedChannels.has(nextChannel) && nextChannel < 16) {
+        nextChannel++
+      }
+      track.channel = nextChannel
+    }
+
+    // 记录使用的通道
+    if (track.channel !== undefined) {
+      usedChannels.add(track.channel)
+    }
+
     return track
   })
-  const song = emptySong()
-  newTracks.forEach((t) => song.addTrack(t))
+
+  // 创建一个新的 Song 实例，不使用 emptySong
+  const song = new Song()
+
+  // 添加一个 conductor track（这是必需的）
+  const conductorTrack = new Track()
+  // conductor track 的 channel 保持 undefined
+  song.addTrack(conductorTrack)
+
+  // 添加所有导入的音轨
+  newTracks.forEach((track) => song.addTrack(track))
+
   song.name = "imported midi files"
+  song.isSaved = false // 标记为未保存，因为这是新导入的
   return song
 }
 

@@ -19,6 +19,7 @@ export const FileInput: FC<
       id={id ?? fileInputID}
       type="file"
       onChange={onChange}
+      multiple
     />
     <label htmlFor={id ?? fileInputID}>{children}</label>
   </>
@@ -52,7 +53,7 @@ export const LegacyFileMenu: FC<{ close: () => void }> = ({ close }) => {
 
       <FileInput onChange={onClickOpen} accept=".mid,audio/midi">
         <MenuItem>
-          <Localized name="open-song" />
+          <Localized name="import-midi" />
         </MenuItem>
       </FileInput>
 
