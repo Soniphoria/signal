@@ -28,10 +28,8 @@ export const OnInit: FC = () => {
   const init = async () => {
     const closeProgress = showProgress(localized["initializing"])
     try {
-      const loaded = await loadMidiFromLocalStorageIfNeeded()
-      if (!loaded) {
-        await rootStore.init()
-      }
+      // Always initialize the root store (including SoundFont)
+      await rootStore.init()
     } catch (e) {
       setIsErrorDialogOpen(true)
       setErrorMessage((e as Error).message)
