@@ -16,7 +16,7 @@ const LogoDialog: FC<{ open: boolean; onOpenChange: (open: boolean) => void }> =
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <img
-          src="powerBySignal.png"
+          src="/powerBySignal.png"
           alt="Powered by Signal"
           style={{ width: "100%", height: "auto" }}
         />
@@ -76,7 +76,7 @@ export const UserButton: FC = () => {
           }}
         >
           <img
-            src="powerBySignal.png"
+            src="/powerBySignal.png"
             alt="Powered by Signal"
             style={{
               width: "100%",
