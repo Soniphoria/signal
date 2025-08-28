@@ -92,6 +92,11 @@ export const Navigation: FC = () => {
   const { path, setPath } = useRouter()
   const { saveSong, downloadSong } = useSongFile()
   const { saveAndUpload, isUploading } = useSaveAndUpload()
+  
+  // Wrapper function for onClick event that doesn't pass parameters
+  const handleSaveAndUpload = () => {
+    saveAndUpload() // Call without parameters to start with retryCount = 0
+  }
 
   const onClickPianoRollTab = useCallback(() => {
     setPath("/track")
@@ -191,11 +196,11 @@ export const Navigation: FC = () => {
         }}
       >
         <DownloadIcon style={IconStyle} />
-        <TabTitle>Save & Download</TabTitle>
+        <TabTitle>Download</TabTitle>
       </Tab>
 
       <Tab
-        onMouseDown={isUploading ? undefined : saveAndUpload}
+        onMouseDown={isUploading ? undefined : handleSaveAndUpload}
         style={{
           backgroundColor: isUploading ? "rgb(157 255 32 / 0.5)" : "rgb(32 157 255 / 0.8)",
           color: "white",

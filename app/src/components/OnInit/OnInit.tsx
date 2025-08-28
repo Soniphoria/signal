@@ -148,8 +148,14 @@ export const OnInit: FC = () => {
           newTracks.forEach((track) => song.addTrack(track))
 
           song.name = "imported midi files"
-          song.isSaved = false
+          song.isSaved = true  // Mark as saved since it was loaded from cloud storage
           setSong(song)
+          
+          // Set up automatic saving flag for changes
+          const originalEvents = song.tracks.map(track => [...track.events])
+          
+          // Note: In a real implementation, you might want to set up a periodic check
+          // or listen to song changes to automatically mark as unsaved when edited
         }
 
         // Don't remove midi_project_data - we need it for the "Save to Cloud" functionality

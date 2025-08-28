@@ -5,9 +5,10 @@ import { write as writeMidiFile, EndOfTrackEvent } from "midifile-ts"
 import { toRawEvents } from "../helpers/toRawEvents"
 
 export const useSaveAndUpload = () => {
-  const { getSong } = useSong()
+  const { getSong, setSaved } = useSong()
   const toast = useToast()
   const [isUploading, setIsUploading] = useState(false)
+  const [showRetryDialog, setShowRetryDialog] = useState(false)
 
   // Function to export current song to MIDI buffers (similar to downloadSongAsSeparateMidis)
   const exportCurrentSongToMidiBuffers = useCallback(() => {
@@ -60,7 +61,23 @@ export const useSaveAndUpload = () => {
     return midiBuffers
   }, [getSong])
 
-  const saveAndUpload = useCallback(async () => {
+  // Helper function to check if error is network-related
+  const isNetworkError = (error: any): boolean => {
+    return (
+      error.message?.includes("fetch") ||
+      error.message?.includes("network") ||
+      error.message?.includes("NetworkError") ||
+      error.message?.includes("Failed to fetch") ||
+      error.name === "TypeError" && error.message.includes("fetch")
+    )
+  }
+
+  // Helper function to check if error is JWT-related
+  const isAuthError = (status: number): boolean => {
+    return status === 401 || status === 403
+  }
+
+  const saveAndUpload = useCallback(async (retryCount: number = 0) => {
     if (isUploading) return
 
     setIsUploading(true)
@@ -108,6 +125,17 @@ export const useSaveAndUpload = () => {
       })
 
       if (!response.ok) {
+        // Check for JWT expiration/authentication errors
+        if (isAuthError(response.status)) {
+          toast.error("Authentication expired. Please return to Audio Melody Weaver and sign in again.")
+          // Clear invalid JWT
+          localStorage.removeItem("jwt_token_for_signal")
+          // Redirect to Audio Melody Weaver for re-authentication
+          const audioMelodyWeaverUrl = `http://localhost:8081/login`
+          window.open(audioMelodyWeaverUrl, '_blank')
+          return
+        }
+        
         const errorText = await response.text()
         throw new Error(`Upload failed: ${response.status} - ${errorText}`)
       }
@@ -116,15 +144,37 @@ export const useSaveAndUpload = () => {
       const updatedProjectData = await response.json()
       localStorage.setItem("midi_project_data", JSON.stringify(updatedProjectData))
 
+      // 7. Mark song as saved to prevent warning when closing tab
+      setSaved(true)
+
       toast.success("🎉 Successfully saved to cloud!")
       
     } catch (error) {
       console.error("Save and upload error:", error)
+      
+      // Check if it's a network error and offer retry
+      if (isNetworkError(error) && retryCount < 2) {
+        setIsUploading(false)
+        
+        // Show retry dialog
+        const shouldRetry = window.confirm(
+          `Network error occurred. Would you like to retry? (Attempt ${retryCount + 1}/3)\n\nError: ${error instanceof Error ? error.message : "Unknown error"}`
+        )
+        
+        if (shouldRetry) {
+          // Retry after 1 second delay
+          setTimeout(() => {
+            saveAndUpload(retryCount + 1)
+          }, 1000)
+          return
+        }
+      }
+      
       toast.error(`Failed to save: ${(error as Error).message}`)
     } finally {
       setIsUploading(false)
     }
-  }, [isUploading, exportCurrentSongToMidiBuffers, toast])
+  }, [isUploading, exportCurrentSongToMidiBuffers, toast, setSaved, isNetworkError, isAuthError])
 
   return {
     saveAndUpload,
