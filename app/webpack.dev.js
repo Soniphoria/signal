@@ -20,7 +20,7 @@ module.exports = merge(common, {
       "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
       "Access-Control-Allow-Headers": "X-Requested-With, content-type, Authorization",
       // Add CSP headers to allow necessary resources
-      "Content-Security-Policy": "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; img-src 'self' data: https:; font-src 'self' https: data:; connect-src 'self' https: wss: ws: blob:;"
+      "Content-Security-Policy": "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; img-src 'self' data: https:; font-src 'self' https: data:; connect-src 'self' https: http://localhost:8000 wss: ws: blob:;"
     },
     static: {
       directory: path.resolve(__dirname, "public"),
@@ -38,6 +38,24 @@ module.exports = merge(common, {
         protocol: 'ws'
       }
     },
+    proxy: [
+      {
+        context: ['/api'],
+        target: 'http://localhost:8010',
+        changeOrigin: true,
+        pathRewrite: {
+          '^/api': '', // Remove /api prefix when forwarding
+        },
+      },
+      {
+        context: ['/azure-proxy'],
+        target: 'https://soniphoria.blob.core.windows.net',
+        changeOrigin: true,
+        pathRewrite: {
+          '^/azure-proxy': '/dawify-output', // Replace /azure-proxy with /dawify-output
+        },
+      },
+    ],
     historyApiFallback: {
       rewrites: [
         { from: /^\/projects\/.*\/midi_tracks/, to: "/edit.html" },

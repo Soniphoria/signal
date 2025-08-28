@@ -57,8 +57,13 @@ export const OnInit: FC = () => {
         // Fetch all MIDI files
         const fetchPromises = midi_tracks.map(async (track: any) => {
           const url = track.file_path
-          const proxyUrl = "/azure-proxy" + new URL(url).pathname
-          console.log("[OnInit] Fetching MIDI from:", proxyUrl)
+          // Extract blob name from Azure URL: https://account.blob.core.windows.net/container/blob_name
+          const urlObj = new URL(url)
+          const pathParts = urlObj.pathname.split('/')
+          const blobName = pathParts[pathParts.length - 1] // Get the filename
+          const proxyUrl = `/azure-proxy/${blobName}`
+          console.log("[OnInit] Original URL:", url)
+          console.log("[OnInit] Fetching MIDI from proxy:", proxyUrl)
 
           const response = await fetch(proxyUrl)
           if (!response.ok) {
@@ -147,8 +152,9 @@ export const OnInit: FC = () => {
           setSong(song)
         }
 
-        localStorage.removeItem("midi_project_data")
-        console.log("[OnInit] MIDI song(s) loaded successfully")
+        // Don't remove midi_project_data - we need it for the "Save to Cloud" functionality
+        // localStorage.removeItem("midi_project_data")
+        console.log("[OnInit] MIDI song(s) loaded successfully, keeping project data for save functionality")
 
         // Check if we're on the /projects/{project_id}/midi_tracks route or /track route
         const pathMatch =

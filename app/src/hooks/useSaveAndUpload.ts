@@ -94,7 +94,8 @@ export const useSaveAndUpload = () => {
       const formData = new FormData()
       midiBuffers.forEach((midiBuffer, index) => {
         const blob = new Blob([midiBuffer.buffer], { type: "audio/midi" })
-        formData.append(`file_${index}`, blob, midiBuffer.name)
+        // FastAPI expects multiple files with the same name "files" for List[UploadFile]
+        formData.append("files", blob, midiBuffer.name)
       })
 
       // 5. Call backend API
