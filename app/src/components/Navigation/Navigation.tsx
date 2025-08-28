@@ -1,5 +1,6 @@
 import styled from "@emotion/styled"
 import DownloadIcon from "mdi-react/DownloadIcon"
+import CloudUploadIcon from "mdi-react/CloudUploadIcon"
 import Forum from "mdi-react/ForumIcon"
 import Help from "mdi-react/HelpCircleIcon"
 import Settings from "mdi-react/SettingsIcon"
@@ -9,6 +10,7 @@ import { getPlatform, isRunningInElectron } from "../../helpers/platform"
 import { useRootView } from "../../hooks/useRootView"
 import { useRouter } from "../../hooks/useRouter"
 import { useSongFile } from "../../hooks/useSongFile"
+import { useSaveAndUpload } from "../../hooks/useSaveAndUpload"
 import ArrangeIcon from "../../images/icons/arrange.svg"
 import PianoIcon from "../../images/icons/piano.svg"
 import TempoIcon from "../../images/icons/tempo.svg"
@@ -89,6 +91,7 @@ export const Navigation: FC = () => {
   const { setOpenSettingDialog, setOpenHelpDialog } = useRootView()
   const { path, setPath } = useRouter()
   const { saveSong, downloadSong } = useSongFile()
+  const { saveAndUpload, isUploading } = useSaveAndUpload()
 
   const onClickPianoRollTab = useCallback(() => {
     setPath("/track")
@@ -189,6 +192,32 @@ export const Navigation: FC = () => {
       >
         <DownloadIcon style={IconStyle} />
         <TabTitle>Save & Download</TabTitle>
+      </Tab>
+
+      <Tab
+        onMouseDown={isUploading ? undefined : saveAndUpload}
+        style={{
+          backgroundColor: isUploading ? "rgb(157 255 32 / 0.5)" : "rgb(32 157 255 / 0.8)",
+          color: "white",
+          cursor: isUploading ? "not-allowed" : "pointer",
+          opacity: isUploading ? 0.7 : 1,
+        }}
+      >
+        {isUploading ? (
+          <div 
+            style={{
+              width: "1.3rem",
+              height: "1.3rem",
+              border: "2px solid transparent",
+              borderTop: "2px solid white",
+              borderRadius: "50%",
+              animation: "spin 1s linear infinite"
+            }}
+          />
+        ) : (
+          <CloudUploadIcon style={IconStyle} />
+        )}
+        <TabTitle>{isUploading ? "Uploading..." : "Save to Cloud"}</TabTitle>
       </Tab>
 
       <FlexibleSpacer />

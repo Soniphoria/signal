@@ -130,6 +130,12 @@ export const GlobalCSS = () => {
           background-color: ${theme.tertiaryTextColor};
         }
 
+        /* Spinner Animation */
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
         /* firebase */
         .firebase-emulator-warning {
           display: none !important;
