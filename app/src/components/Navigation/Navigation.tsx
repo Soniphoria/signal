@@ -4,13 +4,14 @@ import CloudUploadIcon from "mdi-react/CloudUploadIcon"
 import Forum from "mdi-react/ForumIcon"
 import Help from "mdi-react/HelpCircleIcon"
 import Settings from "mdi-react/SettingsIcon"
-import { CSSProperties, FC, useCallback } from "react"
+import { CSSProperties, FC, useCallback, useState } from "react"
 import { hasFSAccess } from "../../actions/file"
 import { getPlatform, isRunningInElectron } from "../../helpers/platform"
 import { useRootView } from "../../hooks/useRootView"
 import { useRouter } from "../../hooks/useRouter"
 import { useSongFile } from "../../hooks/useSongFile"
 import { useSaveAndUpload } from "../../hooks/useSaveAndUpload"
+import { useUserPermissions } from "../../hooks/useUserPermissions"
 import ArrangeIcon from "../../images/icons/arrange.svg"
 import PianoIcon from "../../images/icons/piano.svg"
 import TempoIcon from "../../images/icons/tempo.svg"
@@ -20,6 +21,7 @@ import { Tooltip } from "../ui/Tooltip"
 import { EditMenuButton } from "./EditMenuButton"
 import { FileMenuButton } from "./FileMenuButton"
 import { UserButton } from "./UserButton"
+import { UpgradePlanDialog } from "../UpgradePlanDialog"
 
 const Container = styled.div`
   display: flex;
@@ -92,6 +94,8 @@ export const Navigation: FC = () => {
   const { path, setPath } = useRouter()
   const { saveSong, downloadSong } = useSongFile()
   const { saveAndUpload, isUploading } = useSaveAndUpload()
+  const { canDownload } = useUserPermissions()
+  const [upgradePlanOpen, setUpgradePlanOpen] = useState(false)
   
   // Wrapper function for onClick event that doesn't pass parameters
   const handleSaveAndUpload = () => {
@@ -119,12 +123,17 @@ export const Navigation: FC = () => {
   }, [setOpenHelpDialog])
 
   const onClickSaveOrDownload = useCallback(() => {
+    if (!canDownload) {
+      setUpgradePlanOpen(true)
+      return
+    }
+    
     if (hasFSAccess) {
       saveSong()
     } else {
       downloadSong()
     }
-  }, [saveSong, downloadSong])
+  }, [saveSong, downloadSong, canDownload])
 
   return (
     <Container>
@@ -259,6 +268,10 @@ export const Navigation: FC = () => {
       )}
 
       <UserButton />
+      <UpgradePlanDialog
+        open={upgradePlanOpen}
+        onClose={() => setUpgradePlanOpen(false)}
+      />
     </Container>
   )
 }
