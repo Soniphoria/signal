@@ -1,5 +1,6 @@
-import { FC } from "react"
+import { FC, useState } from "react"
 import { Dialog } from "./Dialog/Dialog"
+import { useUserPermissions } from "../hooks/useUserPermissions"
 
 interface UpgradePlanDialogProps {
   open: boolean
@@ -10,11 +11,15 @@ export const UpgradePlanDialog: FC<UpgradePlanDialogProps> = ({
   open,
   onClose,
 }) => {
+  const { userType, updateUserType } = useUserPermissions()
+  const [isUpdating, setIsUpdating] = useState(false)
+
   const plans = [
     {
       name: "Free Account",
       price: "$0",
       period: "forever",
+      type: "free" as const,
       features: [
         "✓ Unlimited MIDI editing",
         "✓ Basic sequencer features",
@@ -22,12 +27,13 @@ export const UpgradePlanDialog: FC<UpgradePlanDialogProps> = ({
         "✗ Advanced export options",
         "✗ Priority support",
       ],
-      current: true,
+      current: userType === "free",
     },
     {
       name: "Premium Account",
       price: "$9.99",
       period: "month",
+      type: "premium" as const,
       popular: true,
       features: [
         "✓ Unlimited MIDI editing",
@@ -36,9 +42,27 @@ export const UpgradePlanDialog: FC<UpgradePlanDialogProps> = ({
         "✓ All export formats",
         "✓ Priority support",
       ],
-      current: false,
+      current: userType === "premium",
     },
   ]
+
+  const handleUpgrade = async (targetType: "free" | "premium") => {
+    if (targetType === userType || isUpdating) return
+    
+    setIsUpdating(true)
+    try {
+      await updateUserType(targetType)
+      // Close dialog after successful update
+      setTimeout(() => {
+        onClose()
+      }, 500) // Small delay to show the update message
+    } catch (error) {
+      console.error("Failed to update user type:", error)
+      alert("Failed to update account type. Please try again.")
+    } finally {
+      setIsUpdating(false)
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -62,7 +86,7 @@ export const UpgradePlanDialog: FC<UpgradePlanDialogProps> = ({
             fontSize: "1.5rem",
           }}
         >
-          Upgrade to Premium
+          Choose Your Plan
         </h2>
         <p
           style={{
@@ -71,7 +95,7 @@ export const UpgradePlanDialog: FC<UpgradePlanDialogProps> = ({
             marginBottom: "2rem",
           }}
         >
-          Unlock full MIDI download capabilities and advanced features
+          Select between Free and Premium plans. Switch anytime!
         </p>
 
         <div
@@ -173,18 +197,14 @@ export const UpgradePlanDialog: FC<UpgradePlanDialogProps> = ({
                     : "var(--color-theme)",
                   color: plan.current ? "var(--color-text-secondary)" : "black",
                   fontWeight: "bold",
-                  cursor: plan.current ? "not-allowed" : "pointer",
+                  cursor: (plan.current || isUpdating) ? "not-allowed" : "pointer",
+                  opacity: isUpdating ? 0.6 : 1,
                 }}
-                disabled={plan.current}
-                onClick={() => {
-                  if (!plan.current) {
-                    // For now, just close the dialog
-                    // Later this will handle payment processing
-                    onClose()
-                  }
-                }}
+                disabled={plan.current || isUpdating}
+                onClick={() => handleUpgrade(plan.type)}
               >
-                {plan.current ? "Current Plan" : "Upgrade Now"}
+                {isUpdating ? "Updating..." : plan.current ? "Current Plan" : 
+                 plan.type === "premium" ? "Upgrade to Premium" : "Switch to Free"}
               </button>
             </div>
           ))}
