@@ -59,7 +59,7 @@ export const OnInit: FC = () => {
           const url = track.file_path
           // Extract blob name from Azure URL: https://account.blob.core.windows.net/container/blob_name
           const urlObj = new URL(url)
-          const pathParts = urlObj.pathname.split('/')
+          const pathParts = urlObj.pathname.split("/")
           const blobName = pathParts[pathParts.length - 1] // Get the filename
           const proxyUrl = `/azure-proxy/${blobName}`
           console.log("[OnInit] Original URL:", url)
@@ -148,19 +148,18 @@ export const OnInit: FC = () => {
           newTracks.forEach((track) => song.addTrack(track))
 
           song.name = "imported midi files"
-          song.isSaved = true  // Mark as saved since it was loaded from cloud storage
+          song.isSaved = true // Mark as saved since it was loaded from cloud storage
           setSong(song)
-          
-          // Set up automatic saving flag for changes
-          const originalEvents = song.tracks.map(track => [...track.events])
-          
+
           // Note: In a real implementation, you might want to set up a periodic check
           // or listen to song changes to automatically mark as unsaved when edited
         }
 
         // Don't remove midi_project_data - we need it for the "Save to Cloud" functionality
         // localStorage.removeItem("midi_project_data")
-        console.log("[OnInit] MIDI song(s) loaded successfully, keeping project data for save functionality")
+        console.log(
+          "[OnInit] MIDI song(s) loaded successfully, keeping project data for save functionality",
+        )
 
         // Check if we're on the /projects/{project_id}/midi_tracks route or /track route
         const pathMatch =

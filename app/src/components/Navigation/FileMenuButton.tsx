@@ -15,11 +15,7 @@ import { Tab } from "./Navigation"
 
 export const FileMenuButton: FC = () => {
   const { authUser: user } = useAuth()
-  const {
-    openFileDrawer: isOpen,
-    setOpenFileDrawer,
-    setOpenSignInDialog,
-  } = useRootView()
+  const { openFileDrawer: isOpen, setOpenFileDrawer } = useRootView()
   const { exportSong } = useExport()
   const theme = useTheme()
 

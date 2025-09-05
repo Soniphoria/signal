@@ -96,7 +96,7 @@ export const Navigation: FC = () => {
   const { saveAndUpload, isUploading } = useSaveAndUpload()
   const { canDownload } = useUserPermissions()
   const [upgradePlanOpen, setUpgradePlanOpen] = useState(false)
-  
+
   // Wrapper function for onClick event that doesn't pass parameters
   const handleSaveAndUpload = () => {
     saveAndUpload() // Call without parameters to start with retryCount = 0
@@ -127,7 +127,7 @@ export const Navigation: FC = () => {
       setUpgradePlanOpen(true)
       return
     }
-    
+
     if (hasFSAccess) {
       saveSong()
     } else {
@@ -211,21 +211,23 @@ export const Navigation: FC = () => {
       <Tab
         onMouseDown={isUploading ? undefined : handleSaveAndUpload}
         style={{
-          backgroundColor: isUploading ? "rgb(157 255 32 / 0.5)" : "rgb(32 157 255 / 0.8)",
+          backgroundColor: isUploading
+            ? "rgb(157 255 32 / 0.5)"
+            : "rgb(32 157 255 / 0.8)",
           color: "white",
           cursor: isUploading ? "not-allowed" : "pointer",
           opacity: isUploading ? 0.7 : 1,
         }}
       >
         {isUploading ? (
-          <div 
+          <div
             style={{
               width: "1.3rem",
               height: "1.3rem",
               border: "2px solid transparent",
               borderTop: "2px solid white",
               borderRadius: "50%",
-              animation: "spin 1s linear infinite"
+              animation: "spin 1s linear infinite",
             }}
           />
         ) : (

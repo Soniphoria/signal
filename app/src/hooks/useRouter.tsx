@@ -2,7 +2,7 @@ import { makeObservable, observable, action } from "mobx"
 import { createContext, useCallback, useContext, useMemo } from "react"
 import { useMobxSelector } from "./useMobxSelector"
 
-export type RoutePath = string;
+export type RoutePath = string
 
 class Router {
   path: RoutePath = "/track"

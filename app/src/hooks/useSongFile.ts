@@ -1,6 +1,6 @@
 import { useToast } from "dialog-hooks"
 import { ChangeEvent } from "react"
-import { useCreateSong, useOpenSong, useSaveSong } from "../actions"
+import { useCreateSong, useOpenSong } from "../actions"
 import { saveFile, saveFileAs, useOpenFile } from "../actions/file"
 import { useLocalization } from "../localize/useLocalization"
 import { downloadSongAsSeparateMidis } from "../midi/midiConversion"
@@ -12,7 +12,6 @@ export const useSongFile = () => {
   const localized = useLocalization()
   const createSong = useCreateSong()
   const openSong = useOpenSong()
-  const saveSong = useSaveSong()
   const openFile = useOpenFile()
 
   return {
