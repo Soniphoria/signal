@@ -4,7 +4,7 @@ import CloudUploadIcon from "mdi-react/CloudUploadIcon"
 import Forum from "mdi-react/ForumIcon"
 import Help from "mdi-react/HelpCircleIcon"
 import Settings from "mdi-react/SettingsIcon"
-import { CSSProperties, FC, useCallback, useState } from "react"
+import React, { CSSProperties, FC, useCallback, useState, useEffect } from "react"
 import { hasFSAccess } from "../../actions/file"
 import { getPlatform, isRunningInElectron } from "../../helpers/platform"
 import { useRootView } from "../../hooks/useRootView"
@@ -93,7 +93,18 @@ export const Navigation: FC = () => {
   const { path, setPath } = useRouter()
   const { saveSong, downloadSong } = useSongFile()
   const { saveAndUpload, isUploading } = useSaveAndUpload()
-  const { canDownload, showUpgradeDialog } = useUserPermissions()
+  const { canDownload, showUpgradeDialog, userType } = useUserPermissions()
+
+  // Debug logging for user permissions
+  useEffect(() => {
+    console.log(`🧭 Navigation: User permissions updated:`)
+    console.log(`   - userType: ${userType}`)
+    console.log(`   - canDownload: ${canDownload}`)
+    console.log(`   - localStorage.signal_user_type:`, localStorage.getItem('signal_user_type'))
+    
+    // Make user type available globally for debugging
+    ;(window as any).currentUserType = userType
+  }, [userType, canDownload])
 
   // Wrapper function for onClick event that doesn't pass parameters
   const handleSaveAndUpload = () => {
@@ -121,11 +132,17 @@ export const Navigation: FC = () => {
   }, [setOpenHelpDialog])
 
   const onClickSaveOrDownload = useCallback(() => {
+    console.log(`🖱️ Navigation: Download button clicked`)
+    console.log(`   - canDownload: ${canDownload}`)
+    console.log(`   - User permissions:`, { canDownload, userType: (window as any).currentUserType })
+    
     if (!canDownload) {
+      console.log(`❌ Navigation: Download blocked - showing upgrade dialog`)
       showUpgradeDialog()
       return
     }
 
+    console.log(`✅ Navigation: Download allowed - proceeding with save/download`)
     if (hasFSAccess) {
       saveSong()
     } else {
