@@ -17,6 +17,7 @@ class RootViewStore {
   openPublishDialog = false
   openUserSettingsDialog = false
   openDeleteAccountDialog = false
+  openUpgradePlanDialog = false
 
   constructor() {
     makeObservable(this, {
@@ -33,6 +34,7 @@ class RootViewStore {
       openPublishDialog: observable,
       openUserSettingsDialog: observable,
       openDeleteAccountDialog: observable,
+      openUpgradePlanDialog: observable,
     })
   }
 }
@@ -128,6 +130,12 @@ export function useRootView() {
         [rootViewStore],
       )
     },
+    get openUpgradePlanDialog() {
+      return useMobxSelector(
+        () => rootViewStore.openUpgradePlanDialog,
+        [rootViewStore],
+      )
+    },
     setOpenFileDrawer: useCallback(
       (open: boolean) => (rootViewStore.openFileDrawer = open),
       [rootViewStore],
@@ -178,6 +186,10 @@ export function useRootView() {
     ),
     setOpenDeleteAccountDialog: useCallback(
       (open: boolean) => (rootViewStore.openDeleteAccountDialog = open),
+      [rootViewStore],
+    ),
+    setOpenUpgradePlanDialog: useCallback(
+      (open: boolean) => (rootViewStore.openUpgradePlanDialog = open),
       [rootViewStore],
     ),
   }

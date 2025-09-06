@@ -1,9 +1,11 @@
 import { useMemo, useState, useCallback } from "react"
+import { useRootView } from "./useRootView"
 
 export interface UserPermissions {
   canDownload: boolean
   userType: "free" | "premium" | "admin"
   updateUserType: (newType: "free" | "premium" | "admin") => Promise<void>
+  showUpgradeDialog: () => void
 }
 
 // Simple local storage for user type in Signal app (no database integration needed)
@@ -20,6 +22,7 @@ const setUserTypeInStorage = (userType: "free" | "premium" | "admin") => {
 
 export const useUserPermissions = (): UserPermissions => {
   const [userType, setUserType] = useState<"free" | "premium" | "admin">(getUserTypeFromStorage)
+  const { setOpenUpgradePlanDialog } = useRootView()
 
   const updateUserType = useCallback(async (newType: "free" | "premium" | "admin") => {
     setUserType(newType)
@@ -27,11 +30,16 @@ export const useUserPermissions = (): UserPermissions => {
     console.log(`✅ Updated user type to: ${newType}`)
   }, [])
 
+  const showUpgradeDialog = useCallback(() => {
+    setOpenUpgradePlanDialog(true)
+  }, [setOpenUpgradePlanDialog])
+
   return useMemo(() => {
     return {
       canDownload: userType === "premium" || userType === "admin",
       userType,
       updateUserType,
+      showUpgradeDialog,
     }
-  }, [userType, updateUserType])
+  }, [userType, updateUserType, showUpgradeDialog])
 }

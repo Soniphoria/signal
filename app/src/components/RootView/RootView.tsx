@@ -1,6 +1,7 @@
 import styled from "@emotion/styled"
 import { FC } from "react"
 import { useRouter } from "../../hooks/useRouter"
+import { useRootView } from "../../hooks/useRootView"
 import { ArrangeEditor } from "../ArrangeView/ArrangeEditor"
 import { BuildInfo } from "../BuildInfo"
 import { CloudFileDialog } from "../CloudFileDialog/CloudFileDialog"
@@ -19,6 +20,7 @@ import { TempoEditor } from "../TempoGraph/TempoEditor"
 import { TransportPanel } from "../TransportPanel/TransportPanel"
 import { DeleteAccountDialog } from "../UserSettingsDialog/DeleteAccountDialog"
 import { UserSettingsDialog } from "../UserSettingsDialog/UserSettingsDialog"
+import { UpgradePlanDialog } from "../UpgradePlanDialog"
 import { DropZone } from "./DropZone"
 
 const Container = styled.div`
@@ -51,7 +53,10 @@ const Routes: FC = () => {
   )
 }
 
-export const RootView: FC = () => (
+export const RootView: FC = () => {
+  const { openUpgradePlanDialog, setOpenUpgradePlanDialog } = useRootView()
+  
+  return (
   <>
     <DropZone>
       <Column>
@@ -75,5 +80,10 @@ export const RootView: FC = () => (
     <PublishDialog />
     <UserSettingsDialog />
     <DeleteAccountDialog />
+    <UpgradePlanDialog 
+      open={openUpgradePlanDialog} 
+      onClose={() => setOpenUpgradePlanDialog(false)} 
+    />
   </>
-)
+  )
+}

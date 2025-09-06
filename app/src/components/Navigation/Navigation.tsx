@@ -21,7 +21,6 @@ import { Tooltip } from "../ui/Tooltip"
 import { EditMenuButton } from "./EditMenuButton"
 import { FileMenuButton } from "./FileMenuButton"
 import { UserButton } from "./UserButton"
-import { UpgradePlanDialog } from "../UpgradePlanDialog"
 
 const Container = styled.div`
   display: flex;
@@ -94,8 +93,7 @@ export const Navigation: FC = () => {
   const { path, setPath } = useRouter()
   const { saveSong, downloadSong } = useSongFile()
   const { saveAndUpload, isUploading } = useSaveAndUpload()
-  const { canDownload } = useUserPermissions()
-  const [upgradePlanOpen, setUpgradePlanOpen] = useState(false)
+  const { canDownload, showUpgradeDialog } = useUserPermissions()
 
   // Wrapper function for onClick event that doesn't pass parameters
   const handleSaveAndUpload = () => {
@@ -124,7 +122,7 @@ export const Navigation: FC = () => {
 
   const onClickSaveOrDownload = useCallback(() => {
     if (!canDownload) {
-      setUpgradePlanOpen(true)
+      showUpgradeDialog()
       return
     }
 
@@ -133,7 +131,7 @@ export const Navigation: FC = () => {
     } else {
       downloadSong()
     }
-  }, [saveSong, downloadSong, canDownload])
+  }, [saveSong, downloadSong, canDownload, showUpgradeDialog])
 
   return (
     <Container>
@@ -270,10 +268,6 @@ export const Navigation: FC = () => {
       )}
 
       <UserButton />
-      <UpgradePlanDialog
-        open={upgradePlanOpen}
-        onClose={() => setUpgradePlanOpen(false)}
-      />
     </Container>
   )
 }

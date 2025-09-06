@@ -1,4 +1,4 @@
-import { FC, useState } from "react"
+import { FC } from "react"
 import { Dialog } from "./Dialog/Dialog"
 import { useUserPermissions } from "../hooks/useUserPermissions"
 
@@ -11,57 +11,12 @@ export const UpgradePlanDialog: FC<UpgradePlanDialogProps> = ({
   open,
   onClose,
 }) => {
-  const { userType, updateUserType } = useUserPermissions()
-  const [isUpdating, setIsUpdating] = useState(false)
+  const { userType } = useUserPermissions()
 
-  const plans = [
-    {
-      name: "Free Account",
-      price: "$0",
-      period: "forever",
-      type: "free" as const,
-      features: [
-        "✓ Unlimited MIDI editing",
-        "✓ Basic sequencer features",
-        "✗ Download MIDI files",
-        "✗ Advanced export options",
-        "✗ Priority support",
-      ],
-      current: userType === "free",
-    },
-    {
-      name: "Premium Account",
-      price: "$9.99",
-      period: "month",
-      type: "premium" as const,
-      popular: true,
-      features: [
-        "✓ Unlimited MIDI editing",
-        "✓ Advanced sequencer features",
-        "✓ Download MIDI files",
-        "✓ All export formats",
-        "✓ Priority support",
-      ],
-      current: userType === "premium",
-    },
-  ]
-
-  const handleUpgrade = async (targetType: "free" | "premium") => {
-    if (targetType === userType || isUpdating) return
-    
-    setIsUpdating(true)
-    try {
-      await updateUserType(targetType)
-      // Close dialog after successful update
-      setTimeout(() => {
-        onClose()
-      }, 500) // Small delay to show the update message
-    } catch (error) {
-      console.error("Failed to update user type:", error)
-      alert("Failed to update account type. Please try again.")
-    } finally {
-      setIsUpdating(false)
-    }
+  const handleGoToAudioMelodyWeaver = () => {
+    // Open Audio Melody Weaver in a new tab
+    window.open("http://localhost:8081", "_blank")
+    onClose()
   }
 
   return (
@@ -86,128 +41,104 @@ export const UpgradePlanDialog: FC<UpgradePlanDialogProps> = ({
             fontSize: "1.5rem",
           }}
         >
-          Choose Your Plan
+          🚀 Upgrade to Premium
         </h2>
         <p
           style={{
             color: "var(--color-text-secondary)",
             textAlign: "center",
-            marginBottom: "2rem",
+            marginBottom: "1.5rem",
+            fontSize: "1rem",
           }}
         >
-          Select between Free and Premium plans. Switch anytime!
+          To access download features and upgrade your account, please follow these steps:
         </p>
 
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-            gap: "1.5rem",
+            background: "var(--color-background)",
+            border: "1px solid var(--color-border)",
+            borderRadius: "8px",
+            padding: "1.5rem",
             marginBottom: "2rem",
           }}
         >
-          {plans.map((plan) => (
-            <div
-              key={plan.name}
-              style={{
-                padding: "1.5rem",
-                border: plan.current
-                  ? "2px solid var(--color-theme)"
-                  : "1px solid var(--color-border)",
-                borderRadius: "8px",
-                background: "var(--color-background)",
-                position: "relative",
-              }}
-            >
-              {plan.popular && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "-10px",
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    background: "var(--color-theme)",
-                    color: "black",
-                    padding: "4px 12px",
-                    borderRadius: "12px",
-                    fontSize: "0.75rem",
-                    fontWeight: "bold",
-                  }}
-                >
-                  Most Popular
-                </div>
-              )}
-
-              <div style={{ textAlign: "center", marginBottom: "1rem" }}>
-                <h3
-                  style={{
-                    color: "var(--color-text)",
-                    fontSize: "1.25rem",
-                    marginBottom: "0.5rem",
-                  }}
-                >
-                  {plan.name}
-                </h3>
-                <div
-                  style={{
-                    color: "var(--color-text)",
-                    fontSize: "2rem",
-                    fontWeight: "bold",
-                    marginBottom: "0.25rem",
-                  }}
-                >
-                  {plan.price}
-                  <span
-                    style={{
-                      fontSize: "1rem",
-                      fontWeight: "normal",
-                      color: "var(--color-text-secondary)",
-                    }}
-                  >
-                    /{plan.period}
-                  </span>
-                </div>
-              </div>
-
-              <div style={{ marginBottom: "1.5rem" }}>
-                {plan.features.map((feature, index) => (
-                  <div
-                    key={index}
-                    style={{
-                      color: feature.startsWith("✓")
-                        ? "var(--color-text)"
-                        : "var(--color-text-secondary)",
-                      marginBottom: "0.5rem",
-                      fontSize: "0.9rem",
-                    }}
-                  >
-                    {feature}
-                  </div>
-                ))}
-              </div>
-
-              <button
-                style={{
-                  width: "100%",
-                  padding: "0.75rem",
-                  borderRadius: "4px",
-                  border: "none",
-                  background: plan.current
-                    ? "var(--color-background-secondary)"
-                    : "var(--color-theme)",
-                  color: plan.current ? "var(--color-text-secondary)" : "black",
-                  fontWeight: "bold",
-                  cursor: (plan.current || isUpdating) ? "not-allowed" : "pointer",
-                  opacity: isUpdating ? 0.6 : 1,
-                }}
-                disabled={plan.current || isUpdating}
-                onClick={() => handleUpgrade(plan.type)}
-              >
-                {isUpdating ? "Updating..." : plan.current ? "Current Plan" : 
-                 plan.type === "premium" ? "Upgrade to Premium" : "Switch to Free"}
-              </button>
+          <h3
+            style={{
+              color: "var(--color-text)",
+              fontSize: "1.1rem",
+              marginBottom: "1rem",
+              textAlign: "center",
+            }}
+          >
+            📋 How to Upgrade:
+          </h3>
+          
+          <div
+            style={{
+              color: "var(--color-text-secondary)",
+              lineHeight: "1.6",
+            }}
+          >
+            <div style={{ marginBottom: "0.75rem", display: "flex", alignItems: "flex-start" }}>
+              <span style={{ color: "var(--color-theme)", fontWeight: "bold", marginRight: "8px" }}>1.</span>
+              <span>Go to the <strong style={{ color: "var(--color-text)" }}>Audio Tracks Dashboard</strong></span>
             </div>
-          ))}
+            
+            <div style={{ marginBottom: "0.75rem", display: "flex", alignItems: "flex-start" }}>
+              <span style={{ color: "var(--color-theme)", fontWeight: "bold", marginRight: "8px" }}>2.</span>
+              <span>Click on <strong style={{ color: "var(--color-text)" }}>User Profile</strong> in the top right corner</span>
+            </div>
+            
+            <div style={{ marginBottom: "0.75rem", display: "flex", alignItems: "flex-start" }}>
+              <span style={{ color: "var(--color-theme)", fontWeight: "bold", marginRight: "8px" }}>3.</span>
+              <span>Select <strong style={{ color: "var(--color-text)" }}>Upgrade Plan</strong> to access premium features</span>
+            </div>
+          </div>
+
+          <div
+            style={{
+              marginTop: "1rem",
+              padding: "1rem",
+              background: "var(--color-background-secondary)",
+              borderRadius: "6px",
+              border: "1px solid var(--color-border)",
+            }}
+          >
+            <h4 style={{ color: "var(--color-text)", fontSize: "0.9rem", marginBottom: "0.5rem" }}>
+              💎 Premium Features:
+            </h4>
+            <ul style={{ 
+              color: "var(--color-text-secondary)", 
+              fontSize: "0.85rem", 
+              paddingLeft: "1rem",
+              margin: 0,
+              lineHeight: "1.4"
+            }}>
+              <li>Download MIDI files</li>
+              <li>Download audio tracks</li>
+              <li>Up to 100 projects</li>
+              <li>Priority support</li>
+            </ul>
+          </div>
+        </div>
+
+        <div style={{ textAlign: "center", marginBottom: "1rem" }}>
+          <button
+            onClick={handleGoToAudioMelodyWeaver}
+            style={{
+              padding: "0.75rem 2rem",
+              background: "var(--color-theme)",
+              color: "black",
+              border: "none",
+              borderRadius: "4px",
+              fontWeight: "bold",
+              cursor: "pointer",
+              fontSize: "1rem",
+            }}
+          >
+            🎵 Go to Audio Tracks Dashboard
+          </button>
         </div>
 
         <div style={{ textAlign: "center" }}>
