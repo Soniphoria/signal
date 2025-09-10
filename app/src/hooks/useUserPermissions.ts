@@ -14,8 +14,6 @@ const USER_TYPE_KEY = "signal_user_type"
 const getUserTypeFromStorage = (): "free" | "premium" | "admin" => {
   const stored = localStorage.getItem(USER_TYPE_KEY)
   const userType = (stored as "free" | "premium" | "admin") || "free"
-  console.log(`🔍 Signal useUserPermissions: Reading user type from localStorage['${USER_TYPE_KEY}']:`, stored)
-  console.log(`📊 Signal useUserPermissions: Resolved user type:`, userType)
   return userType
 }
 
@@ -26,7 +24,6 @@ const setUserTypeInStorage = (userType: "free" | "premium" | "admin") => {
 export const useUserPermissions = (): UserPermissions => {
   const [userType, setUserType] = useState<"free" | "premium" | "admin">(() => {
     const initialUserType = getUserTypeFromStorage()
-    console.log(`🚀 Signal useUserPermissions: Hook initialized with user type:`, initialUserType)
     return initialUserType
   })
   const { setOpenUpgradePlanDialog } = useRootView()
@@ -34,7 +31,6 @@ export const useUserPermissions = (): UserPermissions => {
   const updateUserType = useCallback(async (newType: "free" | "premium" | "admin") => {
     setUserType(newType)
     setUserTypeInStorage(newType)
-    console.log(`✅ Updated user type to: ${newType}`)
   }, [])
 
   const showUpgradeDialog = useCallback(() => {
@@ -43,9 +39,6 @@ export const useUserPermissions = (): UserPermissions => {
 
   return useMemo(() => {
     const canDownload = userType === "premium" || userType === "admin"
-    console.log(`🔐 Signal useUserPermissions: Calculated permissions for user type '${userType}':`)
-    console.log(`   - canDownload: ${canDownload}`)
-    console.log(`   - ${canDownload ? '✅ Download allowed' : '❌ Download blocked - will show upgrade dialog'}`)
     
     return {
       canDownload,
