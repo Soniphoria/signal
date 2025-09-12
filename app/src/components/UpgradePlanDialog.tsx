@@ -117,6 +117,7 @@ export const UpgradePlanDialog: FC<UpgradePlanDialogProps> = ({
             }}>
               <li>Download MIDI files</li>
               <li>Download audio tracks</li>
+              <li>Export as Mix (coming soon)</li>
               <li>Up to 100 projects</li>
               <li>Priority support</li>
             </ul>
