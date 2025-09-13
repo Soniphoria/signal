@@ -57,12 +57,25 @@ export const OnInit: FC = () => {
         // Fetch all MIDI files
         const fetchPromises = midi_tracks.map(async (track: any) => {
           const url = track.file_path
-          // Extract blob name from Azure URL: https://account.blob.core.windows.net/container/blob_name
+          // Extract blob path from Azure URL: https://account.blob.core.windows.net/container/blob_path
           const urlObj = new URL(url)
-          const pathParts = urlObj.pathname.split("/")
-          const blobName = pathParts[pathParts.length - 1] // Get the filename
-          const proxyUrl = `/azure-proxy/${blobName}`
+          const pathParts = urlObj.pathname.split("/").filter(part => part !== "")
+          
+          // Find the container name and extract everything after it as the blob path
+          const containerIndex = pathParts.findIndex(part => part === "dawify-output")
+          let blobPath = ""
+          
+          if (containerIndex !== -1 && containerIndex < pathParts.length - 1) {
+            // Get everything after the container name
+            blobPath = pathParts.slice(containerIndex + 1).join("/")
+          } else {
+            // Fallback to old logic for backward compatibility
+            blobPath = pathParts[pathParts.length - 1]
+          }
+          
+          const proxyUrl = `/azure-proxy/${blobPath}`
           console.log("[OnInit] Original URL:", url)
+          console.log("[OnInit] Extracted blob path:", blobPath)
           console.log("[OnInit] Fetching MIDI from proxy:", proxyUrl)
 
           const response = await fetch(proxyUrl)
