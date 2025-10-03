@@ -1,5 +1,8 @@
 {
-  "outputDirectory": "dist",
+  "buildCommand": "cd app && npm run build",
+  "installCommand": "npm install && cd app && npm install",
+  "outputDirectory": "app/dist",
+  "framework": null,
   "rewrites": [
     { "source": "/", "destination": "/index.html" },
     { "source": "/edit", "destination": "/edit.html" },
@@ -9,13 +12,30 @@
     { "source": "/profile", "destination": "/community.html" },
     { "source": "/home", "destination": "/community.html" },
     { "source": "/users/:path*", "destination": "/community.html" },
-    { "source": "/songs/:path*", "destination": "/community.html" }
+    { "source": "/songs/:path*", "destination": "/community.html" },
+    { "source": "/projects/:path*/midi_tracks", "destination": "/edit.html" },
+    { "source": "/projects/:path*", "destination": "/edit.html" },
+    { "source": "/track", "destination": "/edit.html" },
+    { "source": "/arrange", "destination": "/edit.html" },
+    { "source": "/tempo", "destination": "/edit.html" }
   ],
-  "builds": [
+  "headers": [
     {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": { "distDir": "dist" }
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "X-Requested-With, content-type, Authorization"
+        }
+      ]
     }
   ]
 }
