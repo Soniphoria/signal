@@ -46,3 +46,4 @@ dist
 *.provisionprofile
 .turbo
 *.pfx
+.vercel
