@@ -39,12 +39,13 @@ export const OnInit: FC = () => {
   }
 
   const loadMidiFromLocalStorageIfNeeded = async (): Promise<boolean> => {
-    // First, check if data is passed via URL fragment (for cross-domain scenarios)
-    const hash = window.location.hash
-    if (hash && hash.includes('data=')) {
-      console.log("[OnInit] Found data in URL fragment, extracting...")
+    // First, check if data is passed via query parameter
+    const urlParams = new URLSearchParams(window.location.search)
+    const dataParam = urlParams.get('data')
+
+    if (dataParam) {
+      console.log("[OnInit] Found data in query parameter, extracting...")
       try {
-        const dataParam = hash.split('data=')[1]
         const decodedData = JSON.parse(decodeURIComponent(dataParam))
         console.log("[OnInit] Decoded data from URL:", decodedData)
 
@@ -62,10 +63,10 @@ export const OnInit: FC = () => {
           console.log("[OnInit] Saved user type to localStorage:", decodedData.user_type)
         }
 
-        // Clean up URL (remove fragment)
+        // Clean up URL (remove query parameter)
         window.history.replaceState(null, '', window.location.pathname)
       } catch (e) {
-        console.error("[OnInit] Failed to parse URL fragment data:", e)
+        console.error("[OnInit] Failed to parse URL query parameter data:", e)
       }
     }
 
