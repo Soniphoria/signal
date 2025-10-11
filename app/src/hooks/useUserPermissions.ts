@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from "react"
+import { useMemo, useState, useCallback, useEffect } from "react"
 import { useRootView } from "./useRootView"
 
 export interface UserPermissions {
@@ -24,9 +24,35 @@ const setUserTypeInStorage = (userType: "free" | "premium" | "admin") => {
 export const useUserPermissions = (): UserPermissions => {
   const [userType, setUserType] = useState<"free" | "premium" | "admin">(() => {
     const initialUserType = getUserTypeFromStorage()
+    console.log(`🔧 useUserPermissions: Initial userType from localStorage: ${initialUserType}`)
     return initialUserType
   })
   const { setOpenUpgradePlanDialog } = useRootView()
+
+  // Listen for changes to localStorage from OnInit or other sources
+  useEffect(() => {
+    const checkStorageUpdate = () => {
+      const currentStoredType = getUserTypeFromStorage()
+      if (currentStoredType !== userType) {
+        console.log(`🔄 useUserPermissions: Detected localStorage change: ${userType} -> ${currentStoredType}`)
+        setUserType(currentStoredType)
+      }
+    }
+
+    // Check periodically for localStorage changes (cross-tab updates won't trigger storage event in same tab)
+    const intervalId = setInterval(checkStorageUpdate, 500)
+
+    // Also listen for storage events (cross-tab changes)
+    window.addEventListener('storage', checkStorageUpdate)
+
+    // Initial check after mount (in case OnInit hasn't run yet)
+    setTimeout(checkStorageUpdate, 100)
+
+    return () => {
+      clearInterval(intervalId)
+      window.removeEventListener('storage', checkStorageUpdate)
+    }
+  }, [userType])
 
   const updateUserType = useCallback(async (newType: "free" | "premium" | "admin") => {
     setUserType(newType)
