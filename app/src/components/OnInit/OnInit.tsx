@@ -39,17 +39,54 @@ export const OnInit: FC = () => {
   }
 
   const loadMidiFromLocalStorageIfNeeded = async (): Promise<boolean> => {
+    // First, check if data is passed via URL fragment (for cross-domain scenarios)
+    const hash = window.location.hash
+    if (hash && hash.includes('data=')) {
+      console.log("[OnInit] Found data in URL fragment, extracting...")
+      try {
+        const dataParam = hash.split('data=')[1]
+        const decodedData = JSON.parse(decodeURIComponent(dataParam))
+        console.log("[OnInit] Decoded data from URL:", decodedData)
+
+        // Store in localStorage for future use
+        if (decodedData.midi_project_data) {
+          localStorage.setItem('midi_project_data', JSON.stringify(decodedData.midi_project_data))
+          console.log("[OnInit] Saved midi_project_data to localStorage")
+        }
+        if (decodedData.jwt_token) {
+          localStorage.setItem('jwt_token_for_signal', decodedData.jwt_token)
+          console.log("[OnInit] Saved JWT token to localStorage")
+        }
+        if (decodedData.user_type) {
+          localStorage.setItem('signal_user_type', decodedData.user_type)
+          console.log("[OnInit] Saved user type to localStorage:", decodedData.user_type)
+        }
+
+        // Clean up URL (remove fragment)
+        window.history.replaceState(null, '', window.location.pathname)
+      } catch (e) {
+        console.error("[OnInit] Failed to parse URL fragment data:", e)
+      }
+    }
+
+    // Now try to load from localStorage
     const data = localStorage.getItem("midi_project_data")
     if (!data) {
       console.log("[OnInit] No midi_project_data found in localStorage")
+      console.log("[OnInit] Available localStorage keys:", Object.keys(localStorage))
       return false
     }
 
     console.log("[OnInit] Found midi_project_data, starting to load...")
+    console.log("[OnInit] Raw midi_project_data:", data)
     const closeProgress = showProgress(localized["loading-external-midi"])
     try {
-      const { midi_tracks } = JSON.parse(data)
+      const parsedData = JSON.parse(data)
+      console.log("[OnInit] Parsed data:", parsedData)
+      const { midi_tracks, project_id } = parsedData
       console.log("[OnInit] Parsed midi_tracks:", midi_tracks)
+      console.log("[OnInit] Parsed project_id:", project_id)
+      console.log("[OnInit] Current URL:", window.location.href)
 
       if (midi_tracks && midi_tracks.length > 0) {
         console.log(`[OnInit] Loading ${midi_tracks.length} MIDI files...`)
@@ -57,14 +94,16 @@ export const OnInit: FC = () => {
         // Fetch all MIDI files
         const fetchPromises = midi_tracks.map(async (track: any) => {
           const url = track.file_path
+          console.log("[OnInit] Processing track:", track.name, "with URL:", url)
+
           // Extract blob path from Azure URL: https://account.blob.core.windows.net/container/blob_path
           const urlObj = new URL(url)
           const pathParts = urlObj.pathname.split("/").filter(part => part !== "")
-          
+
           // Find the container name and extract everything after it as the blob path
           const containerIndex = pathParts.findIndex(part => part === "dawify-output")
           let blobPath = ""
-          
+
           if (containerIndex !== -1 && containerIndex < pathParts.length - 1) {
             // Get everything after the container name
             blobPath = pathParts.slice(containerIndex + 1).join("/")
@@ -72,8 +111,9 @@ export const OnInit: FC = () => {
             // Fallback to old logic for backward compatibility
             blobPath = pathParts[pathParts.length - 1]
           }
-          
-          const proxyUrl = `/azure-proxy/${blobPath}`
+
+          // Use /api/azure-proxy for Vercel deployment
+          const proxyUrl = `/api/azure-proxy?path=${encodeURIComponent(blobPath)}`
           console.log("[OnInit] Original URL:", url)
           console.log("[OnInit] Extracted blob path:", blobPath)
           console.log("[OnInit] Fetching MIDI from proxy:", proxyUrl)
@@ -98,10 +138,16 @@ export const OnInit: FC = () => {
 
         if (midiFiles.length === 1) {
           // Single file - use existing logic
+          console.log("[OnInit] Single MIDI file detected, loading...")
           const song = songFromArrayBuffer(
             midiFiles[0].arrayBuffer,
             midiFiles[0].name,
           )
+          console.log("[OnInit] Song loaded, checking tempo...")
+          if (song.conductorTrack) {
+            const tempoEvents = song.conductorTrack.events.filter(isSetTempoEvent)
+            console.log("[OnInit] Single file - Tempo events:", tempoEvents)
+          }
           setSong(song)
         } else {
           // Multiple files - combine them like songsFromFiles
@@ -143,6 +189,9 @@ export const OnInit: FC = () => {
           const song = new Song()
 
           // Find first conductor track with tempo info
+          console.log("[OnInit] Looking for conductor track with tempo info...")
+          console.log("[OnInit] Number of songs:", songs.length)
+
           const firstTempoTrack = songs
             .flatMap((s) => s.tracks)
             .find(
@@ -150,9 +199,18 @@ export const OnInit: FC = () => {
                 track.isConductorTrack && track.events.some(isSetTempoEvent),
             )
 
+          console.log("[OnInit] Found tempo track:", !!firstTempoTrack)
+          if (firstTempoTrack) {
+            const tempoEvents = firstTempoTrack.events.filter(isSetTempoEvent)
+            console.log("[OnInit] Tempo events found:", tempoEvents)
+            console.log("[OnInit] Number of tempo events:", tempoEvents.length)
+          }
+
           const mainConductorTrack = firstTempoTrack
             ? firstTempoTrack.clone()
             : conductorTrack()
+
+          console.log("[OnInit] Using conductor track:", firstTempoTrack ? "from MIDI file" : "default")
 
           // Add conductor track
           song.addTrack(mainConductorTrack)

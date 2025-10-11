@@ -4,6 +4,7 @@
   "outputDirectory": "app/dist",
   "framework": null,
   "rewrites": [
+    { "source": "/azure-proxy/:path*", "destination": "/api/azure-proxy" },
     { "source": "/", "destination": "/index.html" },
     { "source": "/edit", "destination": "/edit.html" },
     { "source": "/auth", "destination": "/auth.html" },
