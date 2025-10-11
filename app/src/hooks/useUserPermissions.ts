@@ -1,5 +1,6 @@
 import { useMemo, useState, useCallback, useEffect } from "react"
 import { useRootView } from "./useRootView"
+import { getUserProfile } from "../lib/supabase"
 
 export interface UserPermissions {
   canDownload: boolean
@@ -8,8 +9,9 @@ export interface UserPermissions {
   showUpgradeDialog: () => void
 }
 
-// Simple local storage for user type in Signal app (no database integration needed)
+// Local storage keys
 const USER_TYPE_KEY = "signal_user_type"
+const JWT_TOKEN_KEY = "jwt_token_for_signal"
 
 const getUserTypeFromStorage = (): "free" | "premium" | "admin" => {
   const stored = localStorage.getItem(USER_TYPE_KEY)
@@ -31,7 +33,42 @@ export const useUserPermissions = (): UserPermissions => {
   })
   const { setOpenUpgradePlanDialog } = useRootView()
 
-  // Listen for changes to localStorage from OnInit or other sources
+  // Fetch user type from Supabase on component mount
+  useEffect(() => {
+    const fetchUserTypeFromSupabase = async () => {
+      const jwtToken = localStorage.getItem(JWT_TOKEN_KEY)
+
+      if (!jwtToken) {
+        console.log('⚠️ useUserPermissions: No JWT token found, using default user type (free)')
+        return
+      }
+
+      console.log('🔄 useUserPermissions: Fetching user profile from Supabase...')
+
+      try {
+        const profile = await getUserProfile(jwtToken)
+
+        if (profile && profile.user_type) {
+          console.log(`✅ useUserPermissions: Fetched user_type from Supabase: ${profile.user_type}`)
+
+          // Update both state and localStorage
+          setUserType(profile.user_type)
+          setUserTypeInStorage(profile.user_type)
+
+          console.log(`💾 useUserPermissions: Saved user_type to localStorage: ${profile.user_type}`)
+        } else {
+          console.warn('⚠️ useUserPermissions: No user_type found in Supabase profile')
+        }
+      } catch (error) {
+        console.error('❌ useUserPermissions: Error fetching from Supabase:', error)
+      }
+    }
+
+    // Fetch on mount
+    fetchUserTypeFromSupabase()
+  }, [])
+
+  // Listen for changes to localStorage from OnInit or other sources (fallback)
   useEffect(() => {
     const checkStorageUpdate = () => {
       const currentStoredType = getUserTypeFromStorage()
