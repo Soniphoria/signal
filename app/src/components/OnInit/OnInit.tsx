@@ -71,10 +71,25 @@ export const OnInit: FC = () => {
     }
 
     // Now try to load from localStorage
+    console.log("[OnInit] Checking localStorage at domain:", window.location.hostname)
+    console.log("[OnInit] Current URL:", window.location.href)
+    console.log("[OnInit] All localStorage keys:", Object.keys(localStorage))
+    console.log("[OnInit] localStorage contents:")
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key) {
+        const value = localStorage.getItem(key)
+        console.log(`   - ${key}: ${value?.substring(0, 100)}${value && value.length > 100 ? '...' : ''}`)
+      }
+    }
+
     const data = localStorage.getItem("midi_project_data")
     if (!data) {
-      console.log("[OnInit] No midi_project_data found in localStorage")
-      console.log("[OnInit] Available localStorage keys:", Object.keys(localStorage))
+      console.log("[OnInit] ❌ No midi_project_data found in localStorage")
+      console.log("[OnInit] This might indicate:")
+      console.log("   1. Different domain (localStorage not shared)")
+      console.log("   2. Data not written yet (timing issue)")
+      console.log("   3. Data was cleared by another script")
       return false
     }
 

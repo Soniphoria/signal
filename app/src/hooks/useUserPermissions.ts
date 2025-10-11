@@ -23,8 +23,10 @@ const setUserTypeInStorage = (userType: "free" | "premium" | "admin") => {
 
 export const useUserPermissions = (): UserPermissions => {
   const [userType, setUserType] = useState<"free" | "premium" | "admin">(() => {
+    console.log(`🔧 useUserPermissions: Initializing at domain: ${window.location.hostname}`)
+    console.log(`🔧 useUserPermissions: Raw localStorage value: "${localStorage.getItem(USER_TYPE_KEY)}"`)
     const initialUserType = getUserTypeFromStorage()
-    console.log(`🔧 useUserPermissions: Initial userType from localStorage: ${initialUserType}`)
+    console.log(`🔧 useUserPermissions: Parsed userType: ${initialUserType}`)
     return initialUserType
   })
   const { setOpenUpgradePlanDialog } = useRootView()
