@@ -65,6 +65,13 @@ export const OnInit: FC = () => {
       return false
     }
 
+    // If token came from URL, save it to localStorage for future use
+    // (URL params will be cleared by router, so we need to preserve the token)
+    if (tokenFromUrl) {
+      localStorage.setItem("jwt_token_for_signal", tokenFromUrl)
+      console.log("[OnInit] 💾 Saved JWT token from URL to localStorage")
+    }
+
     console.log("[OnInit] 🔑 Found JWT token from:", tokenFromUrl ? "URL parameter" : "localStorage")
     console.log("[OnInit] 🔄 Fetching project and MIDI tracks from Supabase...")
 
@@ -243,6 +250,14 @@ export const OnInit: FC = () => {
       console.log(
         "[OnInit] MIDI song(s) loaded successfully, keeping project data for save functionality",
       )
+
+      // Clean up URL parameters for security (remove token from browser history)
+      // Token is already saved in localStorage, so safe to remove from URL
+      if (tokenFromUrl && window.history.replaceState) {
+        const cleanUrl = window.location.pathname
+        window.history.replaceState({}, "", cleanUrl)
+        console.log("[OnInit] 🧹 Cleaned token from URL (now in localStorage)")
+      }
 
       // Check if we're on the /projects/{project_id}/midi_tracks route or /track route
       const pathMatch =
