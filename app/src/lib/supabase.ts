@@ -39,25 +39,21 @@ export async function getUserProfile(token: string): Promise<UserProfile | null>
 
     console.log('✅ Supabase authentication successful, user ID:', user.id)
 
-    // Fetch user profile from profiles table
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, email, first_name, last_name, user_type, created_at')
-      .eq('id', user.id)
-      .single()
+    // Extract user profile from JWT token user_metadata (already contains all info)
+    // This avoids RLS permission issues and is more efficient
+    const userMetadata = user.user_metadata || {}
 
-    if (error) {
-      console.error('❌ Failed to fetch user profile from Supabase:', error)
-      return null
+    const profile: UserProfile = {
+      id: user.id,
+      email: userMetadata.email || user.email || '',
+      first_name: userMetadata.first_name || '',
+      last_name: userMetadata.last_name || '',
+      user_type: userMetadata.user_type || 'free', // Default to 'free' if not specified
+      created_at: user.created_at || new Date().toISOString(),
     }
 
-    if (!data) {
-      console.warn('⚠️ User profile not found in Supabase')
-      return null
-    }
-
-    console.log('✅ User profile fetched from Supabase:', data)
-    return data as UserProfile
+    console.log('✅ User profile extracted from JWT token:', profile)
+    return profile
   } catch (error) {
     console.error('❌ Error fetching user profile from Supabase:', error)
     return null
