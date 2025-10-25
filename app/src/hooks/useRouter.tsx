@@ -16,13 +16,16 @@ class Router {
     const path = window.location.pathname
     // Normally, you would have more complex routing logic here
     // For now, we just take the whole path
-    this.setPath(path)
+    // Don't call setPath() in constructor to preserve query parameters on initial load
+    this.path = path
   }
 
   setPath(path: RoutePath) {
     this.path = path
     // Also update the browser's URL bar
-    window.history.pushState({}, "", path)
+    // Preserve query parameters when updating the path
+    const search = window.location.search
+    window.history.pushState({}, "", path + search)
   }
 }
 
