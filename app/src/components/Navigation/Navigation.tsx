@@ -135,20 +135,17 @@ export const Navigation: FC = () => {
     console.log(`🖱️ Navigation: Download button clicked`)
     console.log(`   - canDownload: ${canDownload}`)
     console.log(`   - User permissions:`, { canDownload, userType: (window as any).currentUserType })
-    
+
     if (!canDownload) {
       console.log(`❌ Navigation: Download blocked - showing upgrade dialog`)
       showUpgradeDialog()
       return
     }
 
-    console.log(`✅ Navigation: Download allowed - proceeding with save/download`)
-    if (hasFSAccess) {
-      saveSong()
-    } else {
-      downloadSong()
-    }
-  }, [saveSong, downloadSong, canDownload, showUpgradeDialog])
+    console.log(`✅ Navigation: Download allowed - proceeding with download`)
+    console.log(`   - Calling downloadSong() to export separate MIDI files`)
+    downloadSong()
+  }, [downloadSong, canDownload, showUpgradeDialog])
 
   return (
     <Container>

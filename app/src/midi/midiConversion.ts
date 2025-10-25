@@ -204,6 +204,11 @@ export function downloadSongAsMidi(song: Song) {
 // Download each non-conductor track as an individual MIDI file.
 // Each file will include the conductor track (tempo/time-signature) plus the track itself.
 export function downloadSongAsSeparateMidis(song: Song) {
+  console.log(`🎵 downloadSongAsSeparateMidis: Starting separate MIDI export`)
+  console.log(`   - Song name: ${song.name}`)
+  console.log(`   - Song filepath: ${song.filepath}`)
+  console.log(`   - Total tracks: ${song.tracks.length}`)
+
   const conductor = song.conductorTrack
   const endOfTrack: EndOfTrackEvent = {
     deltaTime: 0,
@@ -232,8 +237,12 @@ export function downloadSongAsSeparateMidis(song: Song) {
         : "no name"
   ).replace(/\.mid$/i, "")
 
+  console.log(`   - Base file name: ${baseName}`)
+
+  let exportedCount = 0
   song.tracks.forEach((t, index) => {
     if (t.isConductorTrack) {
+      console.log(`   - Skipping track ${index} (conductor track)`)
       return
     }
 
@@ -246,6 +255,11 @@ export function downloadSongAsSeparateMidis(song: Song) {
 
     const trackLabel = t.name && t.name.length > 0 ? t.name : `track-${index}`
     const fileName = `${baseName} - ${trackLabel}.mid`
+
+    console.log(`   - Exporting track ${index}: ${fileName}`)
     downloadBlob(blob, fileName)
+    exportedCount++
   })
+
+  console.log(`✅ downloadSongAsSeparateMidis: Exported ${exportedCount} MIDI file(s)`)
 }
