@@ -4,6 +4,7 @@
   "outputDirectory": "app/dist",
   "framework": null,
   "rewrites": [
+    { "source": "/api/:path*", "destination": "https://api.soniphoria.app/:path*" },
     { "source": "/azure-proxy/:path*", "destination": "/api/azure-proxy" },
     { "source": "/", "destination": "/index.html" },
     { "source": "/edit", "destination": "/edit.html" },
