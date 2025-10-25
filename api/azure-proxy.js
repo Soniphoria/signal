@@ -28,11 +28,23 @@ export default async function handler(req, res) {
     if (!blobPath) {
       // Fallback: try to extract from URL path
       const urlPath = req.url.split('?')[0];
-      blobPath = urlPath.replace('/api/azure-proxy/', '').replace('/api/azure-proxy', '');
+      console.log('[azure-proxy] Original URL path:', urlPath);
+
+      // Handle both /api/azure-proxy/... and /azure-proxy/...
+      blobPath = urlPath
+        .replace(/^\/api\/azure-proxy\//, '')
+        .replace(/^\/azure-proxy\//, '')
+        .replace(/^\/api\/azure-proxy/, '')
+        .replace(/^\/azure-proxy/, '');
     }
 
-    if (!blobPath) {
-      res.status(400).json({ error: 'No blob path provided' });
+    if (!blobPath || blobPath === urlPath) {
+      console.error('[azure-proxy] Failed to extract blob path from:', req.url);
+      res.status(400).json({
+        error: 'No blob path provided',
+        requestUrl: req.url,
+        extractedPath: blobPath
+      });
       return;
     }
 
