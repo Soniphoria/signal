@@ -66,7 +66,9 @@ module.exports = {
           from: "public",
           to: ".",
           globOptions: {
-            ignore: ["**/*.html"],
+            // Ignore template HTML files (processed by HtmlWebpackPlugin)
+            // but allow index.html to be copied for root path routing
+            ignore: ["**/edit.html", "**/auth.html", "**/community.html"],
           },
         },
       ],
