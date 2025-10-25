@@ -41,10 +41,11 @@ export async function getUserProfile(token: string): Promise<UserProfile | null>
 
     // Fetch user profile from profiles table to get the LATEST user_type
     // JWT token user_metadata is set at signup and doesn't update when user_type changes
+    // Note: email is NOT in profiles table, it's in auth.users (we get it from the user object)
     console.log('🔍 Querying profiles table for user ID:', user.id)
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
-      .select('id, email, first_name, last_name, user_type, created_at')
+      .select('id, first_name, last_name, user_type, created_at')
       .eq('id', user.id)
       .single()
 
@@ -81,7 +82,7 @@ export async function getUserProfile(token: string): Promise<UserProfile | null>
 
     const profile: UserProfile = {
       id: profileData.id,
-      email: profileData.email || user.email || '',
+      email: user.email || '', // Email comes from auth.users, not profiles table
       first_name: profileData.first_name || '',
       last_name: profileData.last_name || '',
       user_type: profileData.user_type || 'free',
@@ -99,12 +100,13 @@ export async function getUserProfile(token: string): Promise<UserProfile | null>
 /**
  * Get user profile without authentication (using anon key)
  * This is useful if you just need to check user type based on user ID
+ * Note: This function cannot get email since it's not in profiles table and requires auth
  */
 export async function getUserProfileById(userId: string): Promise<UserProfile | null> {
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, email, first_name, last_name, user_type, created_at')
+      .select('id, first_name, last_name, user_type, created_at')
       .eq('id', userId)
       .single()
 
@@ -113,7 +115,17 @@ export async function getUserProfileById(userId: string): Promise<UserProfile | 
       return null
     }
 
-    return data as UserProfile
+    // Email is not available without authentication
+    const profile: UserProfile = {
+      id: data.id,
+      email: '', // Not available in profiles table
+      first_name: data.first_name || '',
+      last_name: data.last_name || '',
+      user_type: data.user_type || 'free',
+      created_at: data.created_at || new Date().toISOString(),
+    }
+
+    return profile
   } catch (error) {
     console.error('❌ Error fetching user profile by ID:', error)
     return null
