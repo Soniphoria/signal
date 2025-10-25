@@ -24,10 +24,10 @@ export default async function handler(req, res) {
     // URL format: /api/azure-proxy?path=path/to/blob.mid
     // or /api/azure-proxy/path/to/blob.mid
     let blobPath = req.query.path;
+    let urlPath = req.url.split('?')[0];  // Define urlPath outside the if block
 
     if (!blobPath) {
       // Fallback: try to extract from URL path
-      const urlPath = req.url.split('?')[0];
       console.log('[azure-proxy] Original URL path:', urlPath);
 
       // Handle both /api/azure-proxy/... and /azure-proxy/...
