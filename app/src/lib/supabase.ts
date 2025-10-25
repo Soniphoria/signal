@@ -41,14 +41,21 @@ export async function getUserProfile(token: string): Promise<UserProfile | null>
 
     // Fetch user profile from profiles table to get the LATEST user_type
     // JWT token user_metadata is set at signup and doesn't update when user_type changes
+    console.log('🔍 Querying profiles table for user ID:', user.id)
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('id, email, first_name, last_name, user_type, created_at')
       .eq('id', user.id)
       .single()
 
+    console.log('📊 Database query result - Data:', profileData)
+    console.log('📊 Database query result - Error:', profileError)
+
     if (profileError) {
       console.error('❌ Failed to fetch user profile from database:', profileError)
+      console.error('❌ Error code:', profileError.code)
+      console.error('❌ Error message:', profileError.message)
+      console.error('❌ Error details:', profileError.details)
 
       // Fallback to JWT token user_metadata if database query fails
       console.log('⚠️ Falling back to JWT token user_metadata')
