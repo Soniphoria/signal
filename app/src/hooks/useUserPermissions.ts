@@ -72,7 +72,41 @@ export const useUserPermissions = (): UserPermissions => {
     return () => clearTimeout(timeoutId)
   }, [])
 
-  // Listen for changes to localStorage from OnInit or other sources (fallback)
+  // Listen for JWT token changes and refetch user type from Supabase
+  useEffect(() => {
+    let lastToken = localStorage.getItem(JWT_TOKEN_KEY)
+
+    const checkTokenUpdate = async () => {
+      const currentToken = localStorage.getItem(JWT_TOKEN_KEY)
+
+      // If token changed (OnInit saved a new token), refetch user profile
+      if (currentToken && currentToken !== lastToken) {
+        console.log('🔄 useUserPermissions: Detected JWT token update, refetching user profile...')
+        lastToken = currentToken
+
+        try {
+          const profile = await getUserProfile(currentToken)
+
+          if (profile && profile.user_type) {
+            console.log(`✅ useUserPermissions: Refetched user_type from Supabase: ${profile.user_type}`)
+            setUserType(profile.user_type)
+            setUserTypeInStorage(profile.user_type)
+          }
+        } catch (error) {
+          console.error('❌ useUserPermissions: Error refetching from Supabase:', error)
+        }
+      }
+    }
+
+    // Check periodically for JWT token changes
+    const intervalId = setInterval(checkTokenUpdate, 500)
+
+    return () => {
+      clearInterval(intervalId)
+    }
+  }, [])
+
+  // Listen for changes to localStorage user_type from other sources (fallback)
   useEffect(() => {
     const checkStorageUpdate = () => {
       const currentStoredType = getUserTypeFromStorage()
