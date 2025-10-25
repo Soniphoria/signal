@@ -39,7 +39,8 @@ export const useUserPermissions = (): UserPermissions => {
       const jwtToken = localStorage.getItem(JWT_TOKEN_KEY)
 
       if (!jwtToken) {
-        console.log('⚠️ useUserPermissions: No JWT token found, using default user type (free)')
+        // On initial load, OnInit might not have saved the token yet
+        // Don't log error, just silently wait for the polling mechanism to pick it up
         return
       }
 
@@ -64,8 +65,11 @@ export const useUserPermissions = (): UserPermissions => {
       }
     }
 
-    // Fetch on mount
-    fetchUserTypeFromSupabase()
+    // Delay initial fetch to allow OnInit to save the JWT token first
+    // This prevents the AuthSessionMissingError on initial page load
+    const timeoutId = setTimeout(fetchUserTypeFromSupabase, 300)
+
+    return () => clearTimeout(timeoutId)
   }, [])
 
   // Listen for changes to localStorage from OnInit or other sources (fallback)
