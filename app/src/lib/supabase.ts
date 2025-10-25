@@ -39,20 +39,49 @@ export async function getUserProfile(token: string): Promise<UserProfile | null>
 
     console.log('✅ Supabase authentication successful, user ID:', user.id)
 
-    // Extract user profile from JWT token user_metadata (already contains all info)
-    // This avoids RLS permission issues and is more efficient
-    const userMetadata = user.user_metadata || {}
+    // Fetch user profile from profiles table to get the LATEST user_type
+    // JWT token user_metadata is set at signup and doesn't update when user_type changes
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, email, first_name, last_name, user_type, created_at')
+      .eq('id', user.id)
+      .single()
 
-    const profile: UserProfile = {
-      id: user.id,
-      email: userMetadata.email || user.email || '',
-      first_name: userMetadata.first_name || '',
-      last_name: userMetadata.last_name || '',
-      user_type: userMetadata.user_type || 'free', // Default to 'free' if not specified
-      created_at: user.created_at || new Date().toISOString(),
+    if (profileError) {
+      console.error('❌ Failed to fetch user profile from database:', profileError)
+
+      // Fallback to JWT token user_metadata if database query fails
+      console.log('⚠️ Falling back to JWT token user_metadata')
+      const userMetadata = user.user_metadata || {}
+
+      const profile: UserProfile = {
+        id: user.id,
+        email: userMetadata.email || user.email || '',
+        first_name: userMetadata.first_name || '',
+        last_name: userMetadata.last_name || '',
+        user_type: userMetadata.user_type || 'free',
+        created_at: user.created_at || new Date().toISOString(),
+      }
+
+      console.log('⚠️ User profile from JWT token (fallback):', profile)
+      return profile
     }
 
-    console.log('✅ User profile extracted from JWT token:', profile)
+    if (!profileData) {
+      console.warn('⚠️ No profile found in database')
+      return null
+    }
+
+    const profile: UserProfile = {
+      id: profileData.id,
+      email: profileData.email || user.email || '',
+      first_name: profileData.first_name || '',
+      last_name: profileData.last_name || '',
+      user_type: profileData.user_type || 'free',
+      created_at: profileData.created_at || user.created_at || new Date().toISOString(),
+    }
+
+    console.log('✅ User profile fetched from database (LATEST user_type):', profile)
     return profile
   } catch (error) {
     console.error('❌ Error fetching user profile from Supabase:', error)
