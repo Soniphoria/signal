@@ -52,16 +52,20 @@ export const OnInit: FC = () => {
     const projectId = urlMatch[1]
     console.log(`[OnInit] 🔍 Extracted project_id from URL: ${projectId}`)
 
-    // Get JWT token from localStorage
-    const jwtToken = localStorage.getItem("jwt_token_for_signal")
+    // Get JWT token from URL parameter first (for cross-domain support), then fallback to localStorage
+    const params = new URLSearchParams(window.location.search)
+    const tokenFromUrl = params.get("token")
+    const tokenFromLocalStorage = localStorage.getItem("jwt_token_for_signal")
+    const jwtToken = tokenFromUrl || tokenFromLocalStorage
 
     if (!jwtToken) {
-      console.error("[OnInit] ❌ No JWT token found in localStorage")
+      console.error("[OnInit] ❌ No JWT token found in URL parameter or localStorage")
+      console.error("[OnInit] URL search params:", window.location.search)
       console.error("[OnInit] Available localStorage keys:", Object.keys(localStorage))
       return false
     }
 
-    console.log("[OnInit] 🔑 Found JWT token in localStorage")
+    console.log("[OnInit] 🔑 Found JWT token from:", tokenFromUrl ? "URL parameter" : "localStorage")
     console.log("[OnInit] 🔄 Fetching project and MIDI tracks from Supabase...")
 
     try {
