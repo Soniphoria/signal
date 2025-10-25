@@ -120,8 +120,8 @@ export const OnInit: FC = () => {
           blobPath = pathParts[pathParts.length - 1]
         }
 
-        // Use /api/azure-proxy for Vercel deployment
-        const proxyUrl = `/api/azure-proxy?path=${encodeURIComponent(blobPath)}`
+        // Use /azure-proxy for Vercel deployment (matches vercel.json rewrite rule)
+        const proxyUrl = `/azure-proxy/${blobPath}`
         console.log("[OnInit] Original URL:", url)
         console.log("[OnInit] Extracted blob path:", blobPath)
         console.log("[OnInit] Fetching MIDI from proxy:", proxyUrl)
