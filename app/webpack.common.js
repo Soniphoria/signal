@@ -29,6 +29,12 @@ module.exports = {
     extensions: [".js", ".jsx", ".ts", ".tsx"],
   },
   plugins: [
+    new webpack.DefinePlugin({
+      "process.env.BUILD_TIME": JSON.stringify(new Date().toISOString()),
+      "process.env.VERCEL_GIT_COMMIT_SHA": JSON.stringify(
+        process.env.VERCEL_GIT_COMMIT_SHA || "local-dev"
+      ),
+    }),
     new Dotenv({
       path: path.join(__dirname, "../.env"),
       systemvars: true,
