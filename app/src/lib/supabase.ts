@@ -87,3 +87,116 @@ export async function getUserProfileById(userId: string): Promise<UserProfile | 
     return null
   }
 }
+
+// Type definitions for project and MIDI data
+export interface Project {
+  id: string
+  user_id: string
+  title: string
+  artist: string
+  created_at: string
+  updated_at: string
+}
+
+export interface MidiTrack {
+  id: string
+  project_id: string
+  name: string
+  file_path: string
+  notes_data?: any
+  color?: string
+  created_at: string
+  updated_at: string
+}
+
+/**
+ * Fetch project information from Supabase
+ * @param token - JWT token for authentication
+ * @param projectId - Project ID to fetch
+ * @returns Project information
+ */
+export async function getProjectInfo(token: string, projectId: string): Promise<Project | null> {
+  try {
+    // Set the auth token for this request
+    const { data: { user }, error: authError } = await supabase.auth.setSession({
+      access_token: token,
+      refresh_token: token,
+    })
+
+    if (authError || !user) {
+      console.error('❌ Failed to authenticate with Supabase:', authError)
+      return null
+    }
+
+    console.log('✅ Supabase authentication successful for project fetch, user ID:', user.id)
+
+    // Fetch project from projects table
+    const { data, error } = await supabase
+      .from('projects')
+      .select('id, user_id, title, artist, created_at, updated_at')
+      .eq('id', projectId)
+      .single()
+
+    if (error) {
+      console.error('❌ Failed to fetch project from Supabase:', error)
+      return null
+    }
+
+    if (!data) {
+      console.warn('⚠️ Project not found in Supabase')
+      return null
+    }
+
+    console.log('✅ Project fetched from Supabase:', data)
+    return data as Project
+  } catch (error) {
+    console.error('❌ Error fetching project from Supabase:', error)
+    return null
+  }
+}
+
+/**
+ * Fetch MIDI tracks for a project from Supabase
+ * @param token - JWT token for authentication
+ * @param projectId - Project ID to fetch tracks for
+ * @returns Array of MIDI tracks with Azure Blob Storage URLs
+ */
+export async function getProjectMidiTracks(token: string, projectId: string): Promise<MidiTrack[]> {
+  try {
+    // Set the auth token for this request
+    const { data: { user }, error: authError } = await supabase.auth.setSession({
+      access_token: token,
+      refresh_token: token,
+    })
+
+    if (authError || !user) {
+      console.error('❌ Failed to authenticate with Supabase:', authError)
+      return []
+    }
+
+    console.log('✅ Supabase authentication successful for MIDI tracks fetch, user ID:', user.id)
+
+    // Fetch MIDI tracks from midi_tracks table
+    const { data, error } = await supabase
+      .from('midi_tracks')
+      .select('id, project_id, name, file_path, notes_data, color, created_at, updated_at')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: true })
+
+    if (error) {
+      console.error('❌ Failed to fetch MIDI tracks from Supabase:', error)
+      return []
+    }
+
+    if (!data || data.length === 0) {
+      console.warn('⚠️ No MIDI tracks found for project:', projectId)
+      return []
+    }
+
+    console.log(`✅ Fetched ${data.length} MIDI track(s) from Supabase for project:`, projectId)
+    return data as MidiTrack[]
+  } catch (error) {
+    console.error('❌ Error fetching MIDI tracks from Supabase:', error)
+    return []
+  }
+}

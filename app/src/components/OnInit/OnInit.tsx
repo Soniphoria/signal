@@ -38,77 +38,69 @@ export const OnInit: FC = () => {
     }
   }
 
-  const loadMidiFromLocalStorageIfNeeded = async (): Promise<boolean> => {
-    // First, check if data is passed via query parameter
-    const urlParams = new URLSearchParams(window.location.search)
-    const dataParam = urlParams.get('data')
+  const loadMidiFromSupabase = async (): Promise<boolean> => {
+    // Extract project_id from URL: /projects/{project_id}/midi_tracks
+    const urlMatch = window.location.pathname.match(/\/projects\/([^/]+)/)
 
-    if (dataParam) {
-      console.log("[OnInit] Found data in query parameter, extracting...")
-      try {
-        const decodedData = JSON.parse(decodeURIComponent(dataParam))
-        console.log("[OnInit] Decoded data from URL:", decodedData)
-
-        // Store in localStorage for future use
-        if (decodedData.midi_project_data) {
-          localStorage.setItem('midi_project_data', JSON.stringify(decodedData.midi_project_data))
-          console.log("[OnInit] Saved midi_project_data to localStorage")
-        }
-        if (decodedData.jwt_token) {
-          localStorage.setItem('jwt_token_for_signal', decodedData.jwt_token)
-          console.log("[OnInit] Saved JWT token to localStorage")
-        }
-        if (decodedData.user_type) {
-          localStorage.setItem('signal_user_type', decodedData.user_type)
-          console.log("[OnInit] Saved user type to localStorage:", decodedData.user_type)
-        }
-
-        // Clean up URL (remove query parameter)
-        window.history.replaceState(null, '', window.location.pathname)
-      } catch (e) {
-        console.error("[OnInit] Failed to parse URL query parameter data:", e)
-      }
-    }
-
-    // Now try to load from localStorage
-    console.log("[OnInit] Checking localStorage at domain:", window.location.hostname)
-    console.log("[OnInit] Current URL:", window.location.href)
-    console.log("[OnInit] All localStorage keys:", Object.keys(localStorage))
-    console.log("[OnInit] localStorage contents:")
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
-      if (key) {
-        const value = localStorage.getItem(key)
-        console.log(`   - ${key}: ${value?.substring(0, 100)}${value && value.length > 100 ? '...' : ''}`)
-      }
-    }
-
-    const data = localStorage.getItem("midi_project_data")
-    if (!data) {
-      console.log("[OnInit] ❌ No midi_project_data found in localStorage")
-      console.log("[OnInit] This might indicate:")
-      console.log("   1. Different domain (localStorage not shared)")
-      console.log("   2. Data not written yet (timing issue)")
-      console.log("   3. Data was cleared by another script")
+    if (!urlMatch) {
+      console.log("[OnInit] ❌ No project_id found in URL")
+      console.log("[OnInit] Current URL:", window.location.pathname)
       return false
     }
 
-    console.log("[OnInit] Found midi_project_data, starting to load...")
-    console.log("[OnInit] Raw midi_project_data:", data)
-    const closeProgress = showProgress(localized["loading-external-midi"])
+    const projectId = urlMatch[1]
+    console.log(`[OnInit] 🔍 Extracted project_id from URL: ${projectId}`)
+
+    // Get JWT token from localStorage
+    const jwtToken = localStorage.getItem("jwt_token_for_signal")
+
+    if (!jwtToken) {
+      console.error("[OnInit] ❌ No JWT token found in localStorage")
+      console.error("[OnInit] Available localStorage keys:", Object.keys(localStorage))
+      return false
+    }
+
+    console.log("[OnInit] 🔑 Found JWT token in localStorage")
+    console.log("[OnInit] 🔄 Fetching project and MIDI tracks from Supabase...")
+
     try {
-      const parsedData = JSON.parse(data)
-      console.log("[OnInit] Parsed data:", parsedData)
-      const { midi_tracks, project_id } = parsedData
-      console.log("[OnInit] Parsed midi_tracks:", midi_tracks)
-      console.log("[OnInit] Parsed project_id:", project_id)
-      console.log("[OnInit] Current URL:", window.location.href)
+      // Dynamically import Supabase functions
+      const { getProjectInfo, getProjectMidiTracks } = await import("../../../lib/supabase")
 
-      if (midi_tracks && midi_tracks.length > 0) {
-        console.log(`[OnInit] Loading ${midi_tracks.length} MIDI files...`)
+      // Fetch project info
+      const projectInfo = await getProjectInfo(jwtToken, projectId)
 
-        // Fetch all MIDI files
-        const fetchPromises = midi_tracks.map(async (track: any) => {
+      if (!projectInfo) {
+        console.error("[OnInit] ❌ Failed to fetch project info from Supabase")
+        return false
+      }
+
+      console.log(`[OnInit] ✅ Project info: "${projectInfo.title}" by ${projectInfo.artist}`)
+
+      // Fetch MIDI tracks
+      const midiTracks = await getProjectMidiTracks(jwtToken, projectId)
+
+      if (!midiTracks || midiTracks.length === 0) {
+        console.warn("[OnInit] ⚠️ No MIDI tracks found for project:", projectId)
+        return false
+      }
+
+      console.log(`[OnInit] ✅ Found ${midiTracks.length} MIDI track(s) for project:`, projectId)
+
+      // Store in localStorage for future reference (optional cache)
+      const midiProjectData = {
+        project_id: projectId,
+        midi_tracks: midiTracks
+      }
+      localStorage.setItem('midi_project_data', JSON.stringify(midiProjectData))
+      console.log("[OnInit] 💾 Cached MIDI project data to localStorage")
+
+      // Now load the MIDI files
+      console.log(`[OnInit] 🎵 Loading ${midiTracks.length} MIDI file(s)...`)
+      const closeProgress = showProgress(localized["loading-external-midi"])
+
+      // Fetch all MIDI files
+      const fetchPromises = midiTracks.map(async (track: any) => {
           const url = track.file_path
           console.log("[OnInit] Processing track:", track.name, "with URL:", url)
 
@@ -262,18 +254,17 @@ export const OnInit: FC = () => {
 
         return true // Song loaded successfully
       } else {
-        console.log("[OnInit] No valid midi_tracks found")
+        console.warn("[OnInit] ⚠️ No MIDI files loaded")
+        closeProgress()
+        return false
       }
     } catch (e) {
-      console.error("[OnInit] Error loading MIDI:", e)
+      console.error("[OnInit] ❌ Error loading MIDI from Supabase:", e)
       setIsErrorDialogOpen(true)
       setErrorMessage((e as Error).message)
-    } finally {
-      console.log("[OnInit] Closing progress dialog")
       closeProgress()
+      return false
     }
-
-    return false
   }
 
   const loadExternalMidiIfNeeded = async () => {
@@ -319,11 +310,11 @@ export const OnInit: FC = () => {
       // Always initialize the core first
       await init()
 
-      // Try to load from localStorage first
-      const loadedFromStorage = await loadMidiFromLocalStorageIfNeeded()
+      // Try to load from Supabase first
+      const loadedFromSupabase = await loadMidiFromSupabase()
 
-      // Only try to load external MIDI if we haven't loaded from storage
-      if (!loadedFromStorage) {
+      // Only try to load external MIDI if we haven't loaded from Supabase
+      if (!loadedFromSupabase) {
         await loadExternalMidiIfNeeded()
         await loadArgumentFileIfNeeded()
       }
