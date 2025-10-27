@@ -245,7 +245,7 @@ export const Navigation: FC = () => {
         ) : (
           <CloudUploadIcon style={IconStyle} />
         )}
-        <TabTitle>{isUploading ? "Uploading..." : "Save to Cloud"}</TabTitle>
+        <TabTitle>{isUploading ? "Uploading..." : "Save"}</TabTitle>
       </Tab>
 
       <FlexibleSpacer />

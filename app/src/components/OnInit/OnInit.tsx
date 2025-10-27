@@ -245,7 +245,7 @@ export const OnInit: FC = () => {
         // or listen to song changes to automatically mark as unsaved when edited
       }
 
-      // Don't remove midi_project_data - we need it for the "Save to Cloud" functionality
+      // Don't remove midi_project_data - we need it for the "Save" functionality
       // localStorage.removeItem("midi_project_data")
       console.log(
         "[OnInit] MIDI song(s) loaded successfully, keeping project data for save functionality",
