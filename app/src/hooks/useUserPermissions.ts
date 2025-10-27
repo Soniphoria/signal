@@ -25,10 +25,7 @@ const setUserTypeInStorage = (userType: "free" | "premium" | "admin") => {
 
 export const useUserPermissions = (): UserPermissions => {
   const [userType, setUserType] = useState<"free" | "premium" | "admin">(() => {
-    console.log(`🔧 useUserPermissions: Initializing at domain: ${window.location.hostname}`)
-    console.log(`🔧 useUserPermissions: Raw localStorage value: "${localStorage.getItem(USER_TYPE_KEY)}"`)
     const initialUserType = getUserTypeFromStorage()
-    console.log(`🔧 useUserPermissions: Parsed userType: ${initialUserType}`)
     return initialUserType
   })
   const { setOpenUpgradePlanDialog } = useRootView()
@@ -44,19 +41,15 @@ export const useUserPermissions = (): UserPermissions => {
         return
       }
 
-      console.log('🔄 useUserPermissions: Fetching user profile from Supabase...')
-
       try {
         const profile = await getUserProfile(jwtToken)
 
         if (profile && profile.user_type) {
-          console.log(`✅ useUserPermissions: Fetched user_type from Supabase: ${profile.user_type}`)
 
           // Update both state and localStorage
           setUserType(profile.user_type)
           setUserTypeInStorage(profile.user_type)
 
-          console.log(`💾 useUserPermissions: Saved user_type to localStorage: ${profile.user_type}`)
         } else {
           console.warn('⚠️ useUserPermissions: No user_type found in Supabase profile')
         }
@@ -81,14 +74,12 @@ export const useUserPermissions = (): UserPermissions => {
 
       // If token changed (OnInit saved a new token), refetch user profile
       if (currentToken && currentToken !== lastToken) {
-        console.log('🔄 useUserPermissions: Detected JWT token update, refetching user profile...')
         lastToken = currentToken
 
         try {
           const profile = await getUserProfile(currentToken)
 
           if (profile && profile.user_type) {
-            console.log(`✅ useUserPermissions: Refetched user_type from Supabase: ${profile.user_type}`)
             setUserType(profile.user_type)
             setUserTypeInStorage(profile.user_type)
           }
@@ -111,7 +102,6 @@ export const useUserPermissions = (): UserPermissions => {
     const checkStorageUpdate = () => {
       const currentStoredType = getUserTypeFromStorage()
       if (currentStoredType !== userType) {
-        console.log(`🔄 useUserPermissions: Detected localStorage change: ${userType} -> ${currentStoredType}`)
         setUserType(currentStoredType)
       }
     }

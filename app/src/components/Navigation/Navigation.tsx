@@ -97,10 +97,6 @@ export const Navigation: FC = () => {
 
   // Debug logging for user permissions
   useEffect(() => {
-    console.log(`🧭 Navigation: User permissions updated:`)
-    console.log(`   - userType: ${userType}`)
-    console.log(`   - canDownload: ${canDownload}`)
-    console.log(`   - localStorage.signal_user_type:`, localStorage.getItem('signal_user_type'))
     
     // Make user type available globally for debugging
     ;(window as any).currentUserType = userType

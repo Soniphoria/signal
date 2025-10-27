@@ -10,7 +10,6 @@ function download(url: string, name = "noname") {
 
 // http://stackoverflow.com/a/33622881/1567777
 export function downloadBlob(blob: Blob, fileName: string) {
-  console.log(`📥 downloadBlob: Creating download for ${fileName} (${blob.size} bytes)`)
   const url = window.URL.createObjectURL(blob)
   download(url, fileName)
   setTimeout(() => {

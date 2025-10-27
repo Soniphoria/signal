@@ -4,17 +4,7 @@ import { createRoot } from "react-dom/client"
 import { App } from "./components/App/App"
 import { Analytics } from "./helpers/analytics"
 
-// Log deployment version info
-const BUILD_TIME = process.env.BUILD_TIME || "unknown"
-const VERCEL_GIT_COMMIT_SHA = process.env.VERCEL_GIT_COMMIT_SHA || "unknown"
-const APP_VERSION = "0.0.1"
 
-console.log("=== Signal App Deployment Info ===")
-console.log(`Version: ${APP_VERSION}`)
-console.log(`Build Time: ${BUILD_TIME}`)
-console.log(`Git Commit: ${VERCEL_GIT_COMMIT_SHA}`)
-console.log(`Environment: ${process.env.VERCEL_ENV || "development"}`)
-console.log("==================================")
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN,

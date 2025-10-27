@@ -55,7 +55,6 @@ export default async function handler(req, res) {
     const containerName = 'dawify-output';
     const azureUrl = `https://${azureAccountName}.blob.core.windows.net/${containerName}/${blobPath}`;
 
-    console.log('[azure-proxy] Azure URL:', azureUrl);
 
     // Fetch from Azure Blob Storage
     const response = await fetch(azureUrl);
@@ -73,7 +72,6 @@ export default async function handler(req, res) {
     const arrayBuffer = await response.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
 
-    console.log('[azure-proxy] Successfully fetched blob, size:', uint8Array.length);
 
     // Set appropriate headers
     res.setHeader('Content-Type', 'audio/midi');

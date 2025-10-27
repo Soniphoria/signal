@@ -50,7 +50,6 @@ export const OnInit: FC = () => {
     }
 
     const projectId = urlMatch[1]
-    console.log(`[OnInit] 🔍 Extracted project_id from URL: ${projectId}`)
 
     // Get JWT token from URL parameter first (for cross-domain support), then fallback to localStorage
     const params = new URLSearchParams(window.location.search)
@@ -69,11 +68,8 @@ export const OnInit: FC = () => {
     // (URL params will be cleared by router, so we need to preserve the token)
     if (tokenFromUrl) {
       localStorage.setItem("jwt_token_for_signal", tokenFromUrl)
-      console.log("[OnInit] 💾 Saved JWT token from URL to localStorage")
     }
 
-    console.log("[OnInit] 🔑 Found JWT token from:", tokenFromUrl ? "URL parameter" : "localStorage")
-    console.log("[OnInit] 🔄 Fetching project and MIDI tracks from Supabase...")
 
     try {
       // Fetch project info
@@ -84,7 +80,6 @@ export const OnInit: FC = () => {
         return false
       }
 
-      console.log(`[OnInit] ✅ Project info: "${projectInfo.title}" by ${projectInfo.artist}`)
 
       // Fetch MIDI tracks
       const midiTracks = await getProjectMidiTracks(jwtToken, projectId)
@@ -94,7 +89,6 @@ export const OnInit: FC = () => {
         return false
       }
 
-      console.log(`[OnInit] ✅ Found ${midiTracks.length} MIDI track(s) for project:`, projectId)
 
       // Store in localStorage for future reference (optional cache)
       const midiProjectData = {
@@ -102,10 +96,8 @@ export const OnInit: FC = () => {
         midi_tracks: midiTracks
       }
       localStorage.setItem('midi_project_data', JSON.stringify(midiProjectData))
-      console.log("[OnInit] 💾 Cached MIDI project data to localStorage")
 
       // Now load the MIDI files
-      console.log(`[OnInit] 🎵 Loading ${midiTracks.length} MIDI file(s)...`)
       const closeProgress = showProgress(localized["loading-external-midi"])
 
       try {
@@ -113,7 +105,6 @@ export const OnInit: FC = () => {
       // Fetch all MIDI files
       const fetchPromises = midiTracks.map(async (track: any) => {
         const url = track.file_path
-        console.log("[OnInit] Processing track:", track.name, "with URL:", url)
 
         // Extract blob path from Azure URL: https://account.blob.core.windows.net/container/blob_path
         const urlObj = new URL(url)
@@ -133,9 +124,6 @@ export const OnInit: FC = () => {
 
         // Use /azure-proxy for Vercel deployment (matches vercel.json rewrite rule)
         const proxyUrl = `/azure-proxy/${blobPath}`
-        console.log("[OnInit] Original URL:", url)
-        console.log("[OnInit] Extracted blob path:", blobPath)
-        console.log("[OnInit] Fetching MIDI from proxy:", proxyUrl)
 
         const response = await fetch(proxyUrl)
         if (!response.ok) {
@@ -165,7 +153,6 @@ export const OnInit: FC = () => {
         console.log("[OnInit] Song loaded, checking tempo...")
         if (song.conductorTrack) {
           const tempoEvents = song.conductorTrack.events.filter(isSetTempoEvent)
-          console.log("[OnInit] Single file - Tempo events:", tempoEvents)
         }
         setSong(song)
       } else {
@@ -208,9 +195,6 @@ export const OnInit: FC = () => {
         const song = new Song()
 
         // Find first conductor track with tempo info
-        console.log("[OnInit] Looking for conductor track with tempo info...")
-        console.log("[OnInit] Number of songs:", songs.length)
-
         const firstTempoTrack = songs
           .flatMap((s) => s.tracks)
           .find(
@@ -247,9 +231,7 @@ export const OnInit: FC = () => {
 
       // Don't remove midi_project_data - we need it for the "Save" functionality
       // localStorage.removeItem("midi_project_data")
-      console.log(
-        "[OnInit] MIDI song(s) loaded successfully, keeping project data for save functionality",
-      )
+
 
       // Clean up URL parameters for security (remove token from browser history)
       // Token is already saved in localStorage, so safe to remove from URL
@@ -264,7 +246,6 @@ export const OnInit: FC = () => {
         window.location.pathname.match(/^\/projects\/[^/]+\/midi_tracks/) ||
         window.location.pathname === "/track"
       if (pathMatch) {
-        console.log("[OnInit] On piano roll route, triggering re-render")
         // Force a re-render of the piano roll editor without changing the URL
         setTimeout(() => {
           window.dispatchEvent(new Event("resize"))
