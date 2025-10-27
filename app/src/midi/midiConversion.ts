@@ -197,17 +197,15 @@ export function songToMidi(song: Song) {
 
 export function downloadSongAsMidi(song: Song) {
   const bytes = songToMidi(song)
-  const blob = new Blob([bytes], { type: "application/octet-stream" })
+  // Create a new Uint8Array to ensure proper ArrayBuffer type
+  const arrayBuffer = new Uint8Array(bytes)
+  const blob = new Blob([arrayBuffer], { type: "application/octet-stream" })
   downloadBlob(blob, song.filepath.length > 0 ? song.filepath : "no name.mid")
 }
 
 // Download each non-conductor track as an individual MIDI file.
 // Each file will include the conductor track (tempo/time-signature) plus the track itself.
 export function downloadSongAsSeparateMidis(song: Song) {
-  console.log(`🎵 downloadSongAsSeparateMidis: Starting separate MIDI export`)
-  console.log(`   - Song name: ${song.name}`)
-  console.log(`   - Song filepath: ${song.filepath}`)
-  console.log(`   - Total tracks: ${song.tracks.length}`)
 
   const conductor = song.conductorTrack
   const endOfTrack: EndOfTrackEvent = {
@@ -237,7 +235,6 @@ export function downloadSongAsSeparateMidis(song: Song) {
         : "no name"
   ).replace(/\.mid$/i, "")
 
-  console.log(`   - Base file name: ${baseName}`)
 
   let exportedCount = 0
   song.tracks.forEach((t, index) => {
@@ -251,15 +248,15 @@ export function downloadSongAsSeparateMidis(song: Song) {
       t.channel !== undefined ? rawEvents.map(setChannel(t.channel)) : rawEvents
 
     const bytes = writeMidiFile([conductorRaw, trackRaw], song.timebase)
-    const blob = new Blob([bytes], { type: "application/octet-stream" })
+    // Create a new Uint8Array to ensure proper ArrayBuffer type
+    const arrayBuffer = new Uint8Array(bytes)
+    const blob = new Blob([arrayBuffer], { type: "application/octet-stream" })
 
     const trackLabel = t.name && t.name.length > 0 ? t.name : `track-${index}`
     const fileName = `${baseName} - ${trackLabel}.mid`
 
-    console.log(`   - Exporting track ${index}: ${fileName}`)
     downloadBlob(blob, fileName)
     exportedCount++
   })
 
-  console.log(`✅ downloadSongAsSeparateMidis: Exported ${exportedCount} MIDI file(s)`)
 }
