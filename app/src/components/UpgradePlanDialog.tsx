@@ -92,7 +92,11 @@ export const UpgradePlanDialog: FC<UpgradePlanDialogProps> = ({
             
             <div style={{ marginBottom: "0.75rem", display: "flex", alignItems: "flex-start" }}>
               <span style={{ color: "var(--color-theme)", fontWeight: "bold", marginRight: "8px" }}>3.</span>
-              <span>Select <strong style={{ color: "var(--color-text)" }}>Upgrade Plan</strong> to access premium features</span>
+              <span>Select <strong style={{ color: "var(--color-text)" }}>Upgrade Plan</strong> to enable premium features</span>
+            </div>
+            <div style={{ marginBottom: "0.75rem", display: "flex", alignItems: "flex-start" }}>
+              <span style={{ color: "var(--color-theme)", fontWeight: "bold", marginRight: "8px" }}>3.</span>
+              <span>Reload <strong style={{ color: "var(--color-text)" }}>this page</strong> to access premium features</span>
             </div>
           </div>
 
