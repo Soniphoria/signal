@@ -3,6 +3,7 @@ import { useToast } from "dialog-hooks"
 import { useSong } from "./useSong"
 import { write as writeMidiFile, EndOfTrackEvent } from "midifile-ts"
 import { toRawEvents } from "../helpers/toRawEvents"
+import { updateSignalEditorMidiTracks } from "../lib/dawify"
 
 export const useSaveAndUpload = () => {
   const { getSong, setSaved } = useSong()
@@ -72,11 +73,6 @@ export const useSaveAndUpload = () => {
     )
   }
 
-  // Helper function to check if error is JWT-related
-  const isAuthError = (status: number): boolean => {
-    return status === 401 || status === 403
-  }
-
   const saveAndUpload = useCallback(
     async (retryCount: number = 0) => {
       if (isUploading) return
@@ -98,11 +94,13 @@ export const useSaveAndUpload = () => {
           throw new Error("No project ID found in project data.")
         }
 
-        // 2. Get JWT token
-        const jwt = localStorage.getItem("jwt_token_for_signal")
-        if (!jwt) {
+        // 2. Get the scoped Signal editor access token
+        const editorAccessToken = localStorage.getItem(
+          "signal_editor_access_token",
+        )
+        if (!editorAccessToken) {
           throw new Error(
-            "Authentication token not found. Please return to Audio Melody Weaver and try again.",
+            "Signal editor access token not found. Please return to Audio Melody Weaver and open the editor again.",
           )
         }
 
@@ -120,35 +118,12 @@ export const useSaveAndUpload = () => {
           formData.append("files", blob, midiBuffer.name)
         })
 
-        // 5. Call backend API
-        const response = await fetch(`/api/projects/${projectId}/midi_tracks`, {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${jwt}`,
-          },
-          body: formData,
-        })
-
-        if (!response.ok) {
-          // Check for JWT expiration/authentication errors
-          if (isAuthError(response.status)) {
-            toast.error(
-              "Authentication expired. Please return to Audio Melody Weaver and sign in again.",
-            )
-            // Clear invalid JWT
-            localStorage.removeItem("jwt_token_for_signal")
-            // Redirect to Audio Melody Weaver for re-authentication
-            const audioMelodyWeaverUrl = `http://localhost:8081/login`
-            window.open(audioMelodyWeaverUrl, "_blank")
-            return
-          }
-
-          const errorText = await response.text()
-          throw new Error(`Upload failed: ${response.status} - ${errorText}`)
-        }
-
-        // 6. Update localStorage with new project data
-        const updatedProjectData = await response.json()
+        // 5. Call backend API with scoped editor access
+        const updatedProjectData = await updateSignalEditorMidiTracks(
+          projectId,
+          editorAccessToken,
+          formData,
+        )
         localStorage.setItem(
           "midi_project_data",
           JSON.stringify(updatedProjectData),
@@ -190,7 +165,6 @@ export const useSaveAndUpload = () => {
       toast,
       setSaved,
       isNetworkError,
-      isAuthError,
     ],
   )
 
