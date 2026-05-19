@@ -3,7 +3,14 @@ import { useToast } from "dialog-hooks"
 import { useSong } from "./useSong"
 import { write as writeMidiFile, EndOfTrackEvent } from "midifile-ts"
 import { toRawEvents } from "../helpers/toRawEvents"
-import { updateSignalEditorMidiTracks } from "../lib/dawify"
+import {
+  ensureSignalEditorSessionActive,
+  isAuthError,
+  readSignalEditorSession,
+  SignalSessionExpiredError,
+  updateSignalEditorMidiTracks,
+  writeSignalEditorSession,
+} from "../lib/dawify"
 
 export const useSaveAndUpload = () => {
   const { getSong, setSaved } = useSong()
@@ -80,28 +87,19 @@ export const useSaveAndUpload = () => {
       setIsUploading(true)
 
       try {
-        // 1. Check if we have midi_project_data in localStorage
-        const midiProjectDataStr = localStorage.getItem("midi_project_data")
-        if (!midiProjectDataStr) {
+        // 1. Check if this editor was opened from Audio Melody Weaver.
+        const editorSession = readSignalEditorSession()
+        if (!editorSession) {
           throw new Error(
-            "No project data found. This feature is only available for projects opened from Audio Melody Weaver.",
+            "No active Signal editor session found. Return to Audio Melody Weaver and reopen the editor.",
           )
         }
 
-        const midiProjectData = JSON.parse(midiProjectDataStr)
-        const projectId = midiProjectData.project_id
+        ensureSignalEditorSessionActive(editorSession)
+
+        const projectId = editorSession.project_id
         if (!projectId) {
           throw new Error("No project ID found in project data.")
-        }
-
-        // 2. Get the scoped Signal editor access token
-        const editorAccessToken = localStorage.getItem(
-          "signal_editor_access_token",
-        )
-        if (!editorAccessToken) {
-          throw new Error(
-            "Signal editor access token not found. Please return to Audio Melody Weaver and open the editor again.",
-          )
         }
 
         // 3. Export current song to MIDI buffers
@@ -121,13 +119,14 @@ export const useSaveAndUpload = () => {
         // 5. Call backend API with scoped editor access
         const updatedProjectData = await updateSignalEditorMidiTracks(
           projectId,
-          editorAccessToken,
+          editorSession.editor_access_token,
           formData,
         )
-        localStorage.setItem(
-          "midi_project_data",
-          JSON.stringify(updatedProjectData),
-        )
+        writeSignalEditorSession({
+          ...editorSession,
+          midi_tracks:
+            updatedProjectData.midi_tracks ?? editorSession.midi_tracks,
+        })
 
         // 7. Mark song as saved to prevent warning when closing tab
         setSaved(true)
@@ -152,6 +151,13 @@ export const useSaveAndUpload = () => {
             }, 1000)
             return
           }
+        }
+
+        if (error instanceof SignalSessionExpiredError || isAuthError(error)) {
+          toast.error(
+            "Signal editor session expired. Return to Audio Melody Weaver and reopen the editor.",
+          )
+          return
         }
 
         toast.error(`Failed to save: ${(error as Error).message}`)

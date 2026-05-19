@@ -14,7 +14,10 @@ import { isNotUndefined } from "../../helpers/array"
 import Song from "../../song"
 import { isSetTempoEvent } from "../../track"
 import { conductorTrack } from "../../track/TrackFactory"
-import { exchangeSignalEditorSession } from "../../lib/dawify"
+import {
+  exchangeSignalEditorSession,
+  writeSignalEditorSession,
+} from "../../lib/dawify"
 
 export const OnInit: FC = () => {
   const rootStore = useStores()
@@ -72,20 +75,7 @@ export const OnInit: FC = () => {
         return false
       }
 
-      // Store in localStorage for future reference (optional cache)
-      const midiProjectData = {
-        project_id: projectId,
-        midi_tracks: midiTracks,
-      }
-      localStorage.setItem("midi_project_data", JSON.stringify(midiProjectData))
-      localStorage.setItem(
-        "signal_editor_access_token",
-        editorSession.editor_access_token,
-      )
-      localStorage.setItem(
-        "signal_editor_access_expires_at",
-        editorSession.expires_at,
-      )
+      writeSignalEditorSession(editorSession)
 
       // Now load the MIDI files
       const closeProgress = showProgress(localized["loading-external-midi"])
@@ -226,9 +216,6 @@ export const OnInit: FC = () => {
           // or listen to song changes to automatically mark as unsaved when edited
         }
 
-        // Don't remove midi_project_data - we need it for the "Save" functionality
-        // localStorage.removeItem("midi_project_data")
-
         // Clean up URL parameters for security. The code is one-time and already consumed.
         if (window.history.replaceState) {
           const cleanUrl = window.location.pathname
@@ -257,7 +244,9 @@ export const OnInit: FC = () => {
     } catch (e) {
       console.error("[OnInit] ❌ Error loading MIDI from Supabase:", e)
       setIsErrorDialogOpen(true)
-      setErrorMessage((e as Error).message)
+      setErrorMessage(
+        `${(e as Error).message} Return to Audio Melody Weaver and reopen the editor.`,
+      )
       return false
     }
   }
