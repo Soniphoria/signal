@@ -117,6 +117,7 @@ export const useSaveAndUpload = () => {
         })
 
         // 5. Call backend API with scoped editor access
+        ensureSignalEditorSessionActive(editorSession)
         const updatedProjectData = await updateSignalEditorMidiTracks(
           projectId,
           editorSession.editor_access_token,

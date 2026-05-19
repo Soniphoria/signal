@@ -1,8 +1,10 @@
 import {
   exchangeSignalEditorSession,
   ensureSignalEditorSessionActive,
+  getDawifyApiBaseUrl,
   readSignalEditorSession,
   SignalSessionExpiredError,
+  updateSignalEditorMidiTracks,
   writeSignalEditorSession,
 } from "./dawify"
 
@@ -47,6 +49,56 @@ describe("Dawify Signal session client", () => {
     jest.useRealTimers()
     jest.restoreAllMocks()
     delete process.env.REACT_APP_DAWIFY_API_BASE_URL
+  })
+
+  it("allows Dawify to redact project owner user_id", async () => {
+    const redactedSession = {
+      ...validSession,
+      project: {
+        id: "project-1",
+        title: "Song",
+      },
+    }
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => redactedSession,
+    })
+
+    await expect(
+      exchangeSignalEditorSession("project-1", "code", 1),
+    ).resolves.toEqual(redactedSession)
+  })
+
+  it("URL-encodes project IDs in save-back requests", async () => {
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({ midi_tracks: validSession.midi_tracks }),
+    })
+
+    await updateSignalEditorMidiTracks(
+      "project/with?reserved#chars",
+      "scoped-token",
+      new FormData(),
+    )
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      "https://dawify.example.test/signal/editor-sessions/project%2Fwith%3Freserved%23chars/midi_tracks",
+      expect.objectContaining({
+        method: "PUT",
+      }),
+    )
+  })
+
+  it("rejects explicitly blank Dawify API base URL config", () => {
+    process.env.REACT_APP_DAWIFY_API_BASE_URL = "   "
+
+    expect(() => getDawifyApiBaseUrl()).toThrow("set but blank")
+  })
+
+  it("rejects invalid Dawify API base URL config", () => {
+    process.env.REACT_APP_DAWIFY_API_BASE_URL = "ftp://dawify.example.test"
+
+    expect(() => getDawifyApiBaseUrl()).toThrow("absolute http(s) URL")
   })
 
   it("validates exchange responses before storing them", async () => {

@@ -3,7 +3,7 @@ const DEFAULT_DAWIFY_API_BASE_URL = "/api"
 
 export interface Project {
   id: string
-  user_id: string
+  user_id?: string
   title: string
   artist?: string
   created_at?: string
@@ -66,7 +66,6 @@ const isFutureTimestamp = (value: unknown): value is string => {
 const isProject = (value: unknown): value is Project =>
   isRecord(value) &&
   isNonEmptyString(value.id) &&
-  isNonEmptyString(value.user_id) &&
   isNonEmptyString(value.title)
 
 const isMidiTrack = (value: unknown): value is MidiTrack =>
@@ -88,9 +87,35 @@ export const isSignalEditorSession = (
   isFutureTimestamp(value.expires_at)
 
 export const getDawifyApiBaseUrl = () => {
-  const configured = process.env.REACT_APP_DAWIFY_API_BASE_URL?.trim()
+  const hasConfiguredValue = Object.prototype.hasOwnProperty.call(
+    process.env,
+    "REACT_APP_DAWIFY_API_BASE_URL",
+  )
+  const rawConfigured = process.env.REACT_APP_DAWIFY_API_BASE_URL
 
-  if (configured) {
+  if (hasConfiguredValue) {
+    const configured = rawConfigured?.trim()
+    if (!configured) {
+      throw new Error(
+        "REACT_APP_DAWIFY_API_BASE_URL is set but blank. Remove it to use /api, or set an absolute http(s) URL.",
+      )
+    }
+
+    if (configured.startsWith("/")) {
+      return configured.replace(/\/+$/, "") || "/"
+    }
+
+    try {
+      const url = new URL(configured)
+      if (url.protocol !== "http:" && url.protocol !== "https:") {
+        throw new Error("unsupported protocol")
+      }
+    } catch {
+      throw new Error(
+        "REACT_APP_DAWIFY_API_BASE_URL must be an absolute http(s) URL or a root-relative path.",
+      )
+    }
+
     return configured.replace(/\/+$/, "")
   }
 
@@ -248,7 +273,7 @@ export const updateSignalEditorMidiTracks = async (
   formData: FormData,
 ): Promise<{ midi_tracks?: MidiTrack[] }> => {
   const response = await fetch(
-    `${getDawifyApiBaseUrl()}/signal/editor-sessions/${projectId}/midi_tracks`,
+    `${getDawifyApiBaseUrl()}/signal/editor-sessions/${encodeURIComponent(projectId)}/midi_tracks`,
     {
       method: "PUT",
       headers: {
