@@ -5,7 +5,7 @@ FROM node:${NODE_VERSION} AS builder
 WORKDIR /code
 
 COPY . .
-RUN --mount=type=cache,target=/root/.npm npm install && npm run build
+RUN npm install && npm run build
 
 FROM node:${NODE_VERSION} AS runner
 
