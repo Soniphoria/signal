@@ -14,7 +14,10 @@ import { isNotUndefined } from "../../helpers/array"
 import Song from "../../song"
 import { isSetTempoEvent } from "../../track"
 import { conductorTrack } from "../../track/TrackFactory"
-import { getProjectInfo, getProjectMidiTracks } from "../../lib/supabase"
+import {
+  exchangeSignalEditorSession,
+  writeSignalEditorSession,
+} from "../../lib/dawify"
 
 export const OnInit: FC = () => {
   const rootStore = useStores()
@@ -51,206 +54,185 @@ export const OnInit: FC = () => {
 
     const projectId = urlMatch[1]
 
-    // Get JWT token from URL parameter first (for cross-domain support), then fallback to localStorage
     const params = new URLSearchParams(window.location.search)
-    const tokenFromUrl = params.get("token")
-    const tokenFromLocalStorage = localStorage.getItem("jwt_token_for_signal")
-    const jwtToken = tokenFromUrl || tokenFromLocalStorage
+    const sessionCode = params.get("code")
 
-    if (!jwtToken) {
-      console.error("[OnInit] ❌ No JWT token found in URL parameter or localStorage")
+    if (!sessionCode) {
+      console.error("[OnInit] ❌ No Signal editor session code found in URL")
       console.error("[OnInit] URL search params:", window.location.search)
-      console.error("[OnInit] Available localStorage keys:", Object.keys(localStorage))
       return false
     }
 
-    // If token came from URL, save it to localStorage for future use
-    // (URL params will be cleared by router, so we need to preserve the token)
-    if (tokenFromUrl) {
-      localStorage.setItem("jwt_token_for_signal", tokenFromUrl)
-    }
-
-
     try {
-      // Fetch project info
-      const projectInfo = await getProjectInfo(jwtToken, projectId)
-
-      if (!projectInfo) {
-        console.error("[OnInit] ❌ Failed to fetch project info from Supabase")
-        return false
-      }
-
-
-      // Fetch MIDI tracks
-      const midiTracks = await getProjectMidiTracks(jwtToken, projectId)
+      const editorSession = await exchangeSignalEditorSession(
+        projectId,
+        sessionCode,
+      )
+      const midiTracks = editorSession.midi_tracks
 
       if (!midiTracks || midiTracks.length === 0) {
         console.warn("[OnInit] ⚠️ No MIDI tracks found for project:", projectId)
         return false
       }
 
-
-      // Store in localStorage for future reference (optional cache)
-      const midiProjectData = {
-        project_id: projectId,
-        midi_tracks: midiTracks
-      }
-      localStorage.setItem('midi_project_data', JSON.stringify(midiProjectData))
+      writeSignalEditorSession(editorSession)
 
       // Now load the MIDI files
       const closeProgress = showProgress(localized["loading-external-midi"])
 
       try {
+        // Fetch all MIDI files
+        const fetchPromises = midiTracks.map(async (track: any) => {
+          const url = track.file_path
 
-      // Fetch all MIDI files
-      const fetchPromises = midiTracks.map(async (track: any) => {
-        const url = track.file_path
+          // Extract blob path from Azure URL: https://account.blob.core.windows.net/container/blob_path
+          const urlObj = new URL(url)
+          const pathParts = urlObj.pathname
+            .split("/")
+            .filter((part) => part !== "")
 
-        // Extract blob path from Azure URL: https://account.blob.core.windows.net/container/blob_path
-        const urlObj = new URL(url)
-        const pathParts = urlObj.pathname.split("/").filter(part => part !== "")
-
-        // Find the container name and extract everything after it as the blob path
-        const containerIndex = pathParts.findIndex(part => part === "dawify-output")
-        let blobPath = ""
-
-        if (containerIndex !== -1 && containerIndex < pathParts.length - 1) {
-          // Get everything after the container name
-          blobPath = pathParts.slice(containerIndex + 1).join("/")
-        } else {
-          // Fallback to old logic for backward compatibility
-          blobPath = pathParts[pathParts.length - 1]
-        }
-
-        // Use /azure-proxy for Vercel deployment (matches vercel.json rewrite rule)
-        const proxyUrl = `/azure-proxy/${blobPath}`
-
-        const response = await fetch(proxyUrl)
-        if (!response.ok) {
-          throw new Error(
-            `Failed to fetch MIDI file: ${response.status} ${response.statusText}`,
+          // Find the container name and extract everything after it as the blob path
+          const containerIndex = pathParts.findIndex(
+            (part) => part === "dawify-output",
           )
-        }
+          let blobPath = ""
 
-        const arrayBuffer = await response.arrayBuffer()
-        return {
-          arrayBuffer,
-          name: track.name || `Track ${track.id}` || "downloaded.mid",
-        }
-      })
-
-      // Wait for all files to be fetched
-      const midiFiles = await Promise.all(fetchPromises)
-      console.log("[OnInit] All MIDI files fetched successfully")
-
-      if (midiFiles.length === 1) {
-        // Single file - use existing logic
-        console.log("[OnInit] Single MIDI file detected, loading...")
-        const song = songFromArrayBuffer(
-          midiFiles[0].arrayBuffer,
-          midiFiles[0].name,
-        )
-        console.log("[OnInit] Song loaded, checking tempo...")
-        if (song.conductorTrack) {
-          const tempoEvents = song.conductorTrack.events.filter(isSetTempoEvent)
-        }
-        setSong(song)
-      } else {
-        // Multiple files - combine them like songsFromFiles
-        const songs = midiFiles.map((file) =>
-          songFromArrayBuffer(file.arrayBuffer, file.name),
-        )
-
-        // Collect all non-conductor tracks
-        const allTracks = flatMap(songs, (s) => s.tracks)
-          .filter(isNotUndefined)
-          .filter((track) => !track.isConductorTrack)
-
-        // Track used channels to avoid conflicts
-        const usedChannels = new Set<number>()
-
-        const newTracks = allTracks.map((originalTrack) => {
-          const track = originalTrack.clone()
-
-          // Handle channel conflicts
-          if (
-            track.channel !== undefined &&
-            usedChannels.has(track.channel)
-          ) {
-            let nextChannel = 0
-            while (usedChannels.has(nextChannel) && nextChannel < 16) {
-              nextChannel++
-            }
-            track.channel = nextChannel
+          if (containerIndex !== -1 && containerIndex < pathParts.length - 1) {
+            // Get everything after the container name
+            blobPath = pathParts.slice(containerIndex + 1).join("/")
+          } else {
+            // Fallback to old logic for backward compatibility
+            blobPath = pathParts[pathParts.length - 1]
           }
 
-          if (track.channel !== undefined) {
-            usedChannels.add(track.channel)
+          // Use /azure-proxy for Vercel deployment (matches vercel.json rewrite rule)
+          const proxyUrl = `/azure-proxy/${blobPath}`
+
+          const response = await fetch(proxyUrl)
+          if (!response.ok) {
+            throw new Error(
+              `Failed to fetch MIDI file: ${response.status} ${response.statusText}`,
+            )
           }
 
-          return track
+          const arrayBuffer = await response.arrayBuffer()
+          return {
+            arrayBuffer,
+            name: track.name || `Track ${track.id}` || "downloaded.mid",
+          }
         })
 
-        // Create new Song instance
-        const song = new Song()
+        // Wait for all files to be fetched
+        const midiFiles = await Promise.all(fetchPromises)
+        console.log("[OnInit] All MIDI files fetched successfully")
 
-        // Find first conductor track with tempo info
-        const firstTempoTrack = songs
-          .flatMap((s) => s.tracks)
-          .find(
-            (track) =>
-              track.isConductorTrack && track.events.some(isSetTempoEvent),
+        if (midiFiles.length === 1) {
+          // Single file - use existing logic
+          console.log("[OnInit] Single MIDI file detected, loading...")
+          const song = songFromArrayBuffer(
+            midiFiles[0].arrayBuffer,
+            midiFiles[0].name,
+          )
+          console.log("[OnInit] Song loaded, checking tempo...")
+          if (song.conductorTrack) {
+            const tempoEvents =
+              song.conductorTrack.events.filter(isSetTempoEvent)
+          }
+          setSong(song)
+        } else {
+          // Multiple files - combine them like songsFromFiles
+          const songs = midiFiles.map((file) =>
+            songFromArrayBuffer(file.arrayBuffer, file.name),
           )
 
-        console.log("[OnInit] Found tempo track:", !!firstTempoTrack)
-        if (firstTempoTrack) {
-          const tempoEvents = firstTempoTrack.events.filter(isSetTempoEvent)
-          console.log("[OnInit] Tempo events found:", tempoEvents)
-          console.log("[OnInit] Number of tempo events:", tempoEvents.length)
+          // Collect all non-conductor tracks
+          const allTracks = flatMap(songs, (s) => s.tracks)
+            .filter(isNotUndefined)
+            .filter((track) => !track.isConductorTrack)
+
+          // Track used channels to avoid conflicts
+          const usedChannels = new Set<number>()
+
+          const newTracks = allTracks.map((originalTrack) => {
+            const track = originalTrack.clone()
+
+            // Handle channel conflicts
+            if (
+              track.channel !== undefined &&
+              usedChannels.has(track.channel)
+            ) {
+              let nextChannel = 0
+              while (usedChannels.has(nextChannel) && nextChannel < 16) {
+                nextChannel++
+              }
+              track.channel = nextChannel
+            }
+
+            if (track.channel !== undefined) {
+              usedChannels.add(track.channel)
+            }
+
+            return track
+          })
+
+          // Create new Song instance
+          const song = new Song()
+
+          // Find first conductor track with tempo info
+          const firstTempoTrack = songs
+            .flatMap((s) => s.tracks)
+            .find(
+              (track) =>
+                track.isConductorTrack && track.events.some(isSetTempoEvent),
+            )
+
+          console.log("[OnInit] Found tempo track:", !!firstTempoTrack)
+          if (firstTempoTrack) {
+            const tempoEvents = firstTempoTrack.events.filter(isSetTempoEvent)
+            console.log("[OnInit] Tempo events found:", tempoEvents)
+            console.log("[OnInit] Number of tempo events:", tempoEvents.length)
+          }
+
+          const mainConductorTrack = firstTempoTrack
+            ? firstTempoTrack.clone()
+            : conductorTrack()
+
+          console.log(
+            "[OnInit] Using conductor track:",
+            firstTempoTrack ? "from MIDI file" : "default",
+          )
+
+          // Add conductor track
+          song.addTrack(mainConductorTrack)
+
+          // Add all imported tracks
+          newTracks.forEach((track) => song.addTrack(track))
+
+          song.name = "imported midi files"
+          song.isSaved = true // Mark as saved since it was loaded from cloud storage
+          setSong(song)
+
+          // Note: In a real implementation, you might want to set up a periodic check
+          // or listen to song changes to automatically mark as unsaved when edited
         }
 
-        const mainConductorTrack = firstTempoTrack
-          ? firstTempoTrack.clone()
-          : conductorTrack()
+        // Clean up URL parameters for security. The code is one-time and already consumed.
+        if (window.history.replaceState) {
+          const cleanUrl = window.location.pathname
+          window.history.replaceState({}, "", cleanUrl)
+          console.log("[OnInit] 🧹 Cleaned Signal session code from URL")
+        }
 
-        console.log("[OnInit] Using conductor track:", firstTempoTrack ? "from MIDI file" : "default")
-
-        // Add conductor track
-        song.addTrack(mainConductorTrack)
-
-        // Add all imported tracks
-        newTracks.forEach((track) => song.addTrack(track))
-
-        song.name = "imported midi files"
-        song.isSaved = true // Mark as saved since it was loaded from cloud storage
-        setSong(song)
-
-        // Note: In a real implementation, you might want to set up a periodic check
-        // or listen to song changes to automatically mark as unsaved when edited
-      }
-
-      // Don't remove midi_project_data - we need it for the "Save" functionality
-      // localStorage.removeItem("midi_project_data")
-
-
-      // Clean up URL parameters for security (remove token from browser history)
-      // Token is already saved in localStorage, so safe to remove from URL
-      if (tokenFromUrl && window.history.replaceState) {
-        const cleanUrl = window.location.pathname
-        window.history.replaceState({}, "", cleanUrl)
-        console.log("[OnInit] 🧹 Cleaned token from URL (now in localStorage)")
-      }
-
-      // Check if we're on the /projects/{project_id}/midi_tracks route or /track route
-      const pathMatch =
-        window.location.pathname.match(/^\/projects\/[^/]+\/midi_tracks/) ||
-        window.location.pathname === "/track"
-      if (pathMatch) {
-        // Force a re-render of the piano roll editor without changing the URL
-        setTimeout(() => {
-          window.dispatchEvent(new Event("resize"))
-        }, 100)
-      }
+        // Check if we're on the /projects/{project_id}/midi_tracks route or /track route
+        const pathMatch =
+          window.location.pathname.match(/^\/projects\/[^/]+\/midi_tracks/) ||
+          window.location.pathname === "/track"
+        if (pathMatch) {
+          // Force a re-render of the piano roll editor without changing the URL
+          setTimeout(() => {
+            window.dispatchEvent(new Event("resize"))
+          }, 100)
+        }
 
         closeProgress()
         return true // Song loaded successfully
@@ -262,7 +244,9 @@ export const OnInit: FC = () => {
     } catch (e) {
       console.error("[OnInit] ❌ Error loading MIDI from Supabase:", e)
       setIsErrorDialogOpen(true)
-      setErrorMessage((e as Error).message)
+      setErrorMessage(
+        `${(e as Error).message} Return to Audio Melody Weaver and reopen the editor.`,
+      )
       return false
     }
   }

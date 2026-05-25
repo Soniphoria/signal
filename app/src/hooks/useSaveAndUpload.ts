@@ -3,6 +3,14 @@ import { useToast } from "dialog-hooks"
 import { useSong } from "./useSong"
 import { write as writeMidiFile, EndOfTrackEvent } from "midifile-ts"
 import { toRawEvents } from "../helpers/toRawEvents"
+import {
+  ensureSignalEditorSessionActive,
+  isAuthError,
+  readSignalEditorSession,
+  SignalSessionExpiredError,
+  updateSignalEditorMidiTracks,
+  writeSignalEditorSession,
+} from "../lib/dawify"
 
 export const useSaveAndUpload = () => {
   const { getSong, setSaved } = useSong()
@@ -72,11 +80,6 @@ export const useSaveAndUpload = () => {
     )
   }
 
-  // Helper function to check if error is JWT-related
-  const isAuthError = (status: number): boolean => {
-    return status === 401 || status === 403
-  }
-
   const saveAndUpload = useCallback(
     async (retryCount: number = 0) => {
       if (isUploading) return
@@ -84,26 +87,19 @@ export const useSaveAndUpload = () => {
       setIsUploading(true)
 
       try {
-        // 1. Check if we have midi_project_data in localStorage
-        const midiProjectDataStr = localStorage.getItem("midi_project_data")
-        if (!midiProjectDataStr) {
+        // 1. Check if this editor was opened from Audio Melody Weaver.
+        const editorSession = readSignalEditorSession()
+        if (!editorSession) {
           throw new Error(
-            "No project data found. This feature is only available for projects opened from Audio Melody Weaver.",
+            "No active Signal editor session found. Return to Audio Melody Weaver and reopen the editor.",
           )
         }
 
-        const midiProjectData = JSON.parse(midiProjectDataStr)
-        const projectId = midiProjectData.project_id
+        ensureSignalEditorSessionActive(editorSession)
+
+        const projectId = editorSession.project_id
         if (!projectId) {
           throw new Error("No project ID found in project data.")
-        }
-
-        // 2. Get JWT token
-        const jwt = localStorage.getItem("jwt_token_for_signal")
-        if (!jwt) {
-          throw new Error(
-            "Authentication token not found. Please return to Audio Melody Weaver and try again.",
-          )
         }
 
         // 3. Export current song to MIDI buffers
@@ -120,39 +116,18 @@ export const useSaveAndUpload = () => {
           formData.append("files", blob, midiBuffer.name)
         })
 
-        // 5. Call backend API
-        const response = await fetch(`/api/projects/${projectId}/midi_tracks`, {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${jwt}`,
-          },
-          body: formData,
-        })
-
-        if (!response.ok) {
-          // Check for JWT expiration/authentication errors
-          if (isAuthError(response.status)) {
-            toast.error(
-              "Authentication expired. Please return to Audio Melody Weaver and sign in again.",
-            )
-            // Clear invalid JWT
-            localStorage.removeItem("jwt_token_for_signal")
-            // Redirect to Audio Melody Weaver for re-authentication
-            const audioMelodyWeaverUrl = `http://localhost:8081/login`
-            window.open(audioMelodyWeaverUrl, "_blank")
-            return
-          }
-
-          const errorText = await response.text()
-          throw new Error(`Upload failed: ${response.status} - ${errorText}`)
-        }
-
-        // 6. Update localStorage with new project data
-        const updatedProjectData = await response.json()
-        localStorage.setItem(
-          "midi_project_data",
-          JSON.stringify(updatedProjectData),
+        // 5. Call backend API with scoped editor access
+        ensureSignalEditorSessionActive(editorSession)
+        const updatedProjectData = await updateSignalEditorMidiTracks(
+          projectId,
+          editorSession.editor_access_token,
+          formData,
         )
+        writeSignalEditorSession({
+          ...editorSession,
+          midi_tracks:
+            updatedProjectData.midi_tracks ?? editorSession.midi_tracks,
+        })
 
         // 7. Mark song as saved to prevent warning when closing tab
         setSaved(true)
@@ -179,6 +154,13 @@ export const useSaveAndUpload = () => {
           }
         }
 
+        if (error instanceof SignalSessionExpiredError || isAuthError(error)) {
+          toast.error(
+            "Signal editor session expired. Return to Audio Melody Weaver and reopen the editor.",
+          )
+          return
+        }
+
         toast.error(`Failed to save: ${(error as Error).message}`)
       } finally {
         setIsUploading(false)
@@ -190,7 +172,6 @@ export const useSaveAndUpload = () => {
       toast,
       setSaved,
       isNetworkError,
-      isAuthError,
     ],
   )
 
