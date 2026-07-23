@@ -5,7 +5,7 @@
   "framework": null,
   "rewrites": [
     { "source": "/projects/:path*/midi_tracks", "destination": "/edit.html" },
-    { "source": "/api/:path*", "destination": "https://backend.soniphoria.app/api/:path*" },
+    { "source": "/api/:path*", "destination": "https://backend.soniphoria.app/:path*" },
     { "source": "/azure-proxy/:path*", "destination": "/api/azure-proxy" },
     { "source": "/", "destination": "/index.html" },
     { "source": "/edit", "destination": "/edit.html" },
