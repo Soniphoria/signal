@@ -3,6 +3,7 @@ import { useToast } from "dialog-hooks"
 import { useSong } from "./useSong"
 import { write as writeMidiFile, EndOfTrackEvent } from "midifile-ts"
 import { toRawEvents } from "../helpers/toRawEvents"
+import { getEditorSessionContext } from "../services/editorSessionState"
 
 export const useSaveAndUpload = () => {
   const { getSong, setSaved } = useSong()
@@ -84,35 +85,22 @@ export const useSaveAndUpload = () => {
       setIsUploading(true)
 
       try {
-        // 1. Check if we have midi_project_data in localStorage
-        const midiProjectDataStr = localStorage.getItem("midi_project_data")
-        if (!midiProjectDataStr) {
+        // 1. Require the in-memory context established by the one-time code exchange.
+        const editorSession = getEditorSessionContext()
+        if (!editorSession) {
           throw new Error(
-            "No project data found. This feature is only available for projects opened from Audio Melody Weaver.",
+            "No active cloud editor session was found. Open Signal from Soniphoria again.",
           )
         }
+        const projectId = editorSession.projectId
 
-        const midiProjectData = JSON.parse(midiProjectDataStr)
-        const projectId = midiProjectData.project_id
-        if (!projectId) {
-          throw new Error("No project ID found in project data.")
-        }
-
-        // 2. Get JWT token
-        const jwt = localStorage.getItem("jwt_token_for_signal")
-        if (!jwt) {
-          throw new Error(
-            "Authentication token not found. Please return to Audio Melody Weaver and try again.",
-          )
-        }
-
-        // 3. Export current song to MIDI buffers
+        // 2. Export current song to MIDI buffers
         const midiBuffers = exportCurrentSongToMidiBuffers()
         if (midiBuffers.length === 0) {
           throw new Error("No MIDI tracks to upload.")
         }
 
-        // 4. Prepare FormData
+        // 3. Prepare FormData
         const formData = new FormData()
         midiBuffers.forEach((midiBuffer) => {
           const blob = new Blob([midiBuffer.buffer], { type: "audio/midi" })
@@ -120,12 +108,10 @@ export const useSaveAndUpload = () => {
           formData.append("files", blob, midiBuffer.name)
         })
 
-        // 5. Call backend API
+        // 4. Call backend API with same-site cookies instead of JavaScript-readable JWTs.
         const response = await fetch(`/api/projects/${projectId}/midi_tracks`, {
           method: "PUT",
-          headers: {
-            Authorization: `Bearer ${jwt}`,
-          },
+          credentials: "include",
           body: formData,
         })
 
@@ -133,13 +119,8 @@ export const useSaveAndUpload = () => {
           // Check for JWT expiration/authentication errors
           if (isAuthError(response.status)) {
             toast.error(
-              "Authentication expired. Please return to Audio Melody Weaver and sign in again.",
+              "Your editor session expired. Return to Soniphoria and reopen this project.",
             )
-            // Clear invalid JWT
-            localStorage.removeItem("jwt_token_for_signal")
-            // Redirect to Audio Melody Weaver for re-authentication
-            const audioMelodyWeaverUrl = `http://localhost:8081/login`
-            window.open(audioMelodyWeaverUrl, "_blank")
             return
           }
 
@@ -147,14 +128,10 @@ export const useSaveAndUpload = () => {
           throw new Error(`Upload failed: ${response.status} - ${errorText}`)
         }
 
-        // 6. Update localStorage with new project data
-        const updatedProjectData = await response.json()
-        localStorage.setItem(
-          "midi_project_data",
-          JSON.stringify(updatedProjectData),
-        )
+        // 5. Verify the API returned a successful JSON response.
+        await response.json()
 
-        // 7. Mark song as saved to prevent warning when closing tab
+        // 6. Mark song as saved to prevent warning when closing tab
         setSaved(true)
 
         toast.success("🎉 Successfully saved to cloud!")
