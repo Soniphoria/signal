@@ -102,6 +102,11 @@ export const OnInit: FC = () => {
         const fetchPromises = midiTracks.map(async (track) => {
           const response = await fetch(track.download_url, {
             credentials: "omit",
+            // This page sets Referrer-Policy: no-referrer (see vercel.json),
+            // which would otherwise strip the Referer header this same-origin
+            // GET needs: same-origin GETs carry no Origin header, and the
+            // API's editor auth falls back to Referer when Origin is absent.
+            referrerPolicy: "origin",
           })
           if (!response.ok) {
             throw new Error(
