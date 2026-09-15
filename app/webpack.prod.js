@@ -6,6 +6,14 @@ const WorkboxPlugin = require("workbox-webpack-plugin")
 
 module.exports = merge(common, {
   mode: "production",
+  output: {
+    // Production is only ever reached through the soniphoria.app Cloudflare
+    // Worker proxy at /signal/*, which strips this prefix before forwarding
+    // to this Vercel deployment's own root. Asset URLs baked into the HTML
+    // must therefore include the prefix so the browser re-requests them
+    // through the same proxy path instead of soniphoria.app's own root.
+    publicPath: "/signal/",
+  },
   optimization: {
     concatenateModules: false,
     splitChunks: {
