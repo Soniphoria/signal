@@ -8,7 +8,7 @@ import {
 
 export interface UserPermissions {
   canDownload: boolean
-  userType: "free" | "premium" | "admin"
+  userType: SignalUserType
   showUpgradeDialog: () => void
 }
 

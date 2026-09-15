@@ -1,4 +1,11 @@
-export type SignalUserType = "free" | "premium" | "admin"
+export type SignalUserType =
+  | "free"
+  | "premium"
+  | "admin"
+  | "student"
+  | "parent"
+  | "teacher"
+  | "principal"
 
 export interface EditorSessionMidiTrack {
   id: string
@@ -18,7 +25,13 @@ export interface EditorSessionResolveResponse {
 }
 
 const isUserType = (value: unknown): value is SignalUserType =>
-  value === "free" || value === "premium" || value === "admin"
+  value === "free" ||
+  value === "premium" ||
+  value === "admin" ||
+  value === "student" ||
+  value === "parent" ||
+  value === "teacher" ||
+  value === "principal"
 
 export const resolveEditorSession = async (
   code: string,
